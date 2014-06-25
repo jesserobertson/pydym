@@ -45,3 +45,66 @@ class ProgressBar:
 
     def __str__(self):
         return str(self.prog_bar)
+
+
+# Some functional programming bits and bobs
+def foldl(func, iterable, accum=None):
+    """ A left-fold function, basically identical to reduce
+
+        Left-associative fold, where
+
+            foldl(lambda a, b: a - b, [1, 2, 3, 4])  # returns -8
+
+        is the same as
+
+            (((1 - 2) - 3) - 4)
+
+        :param func: The function to apply to the fold. Should take two
+            arguments and return a single object.
+        :type func: callable
+        :param iterable: The iterable to accumulate over.
+        :type iterable: iterable
+        :param accum: The initial value for the accumulator. If None, the
+            initial value is set to the first object in the sequence.
+    """
+    if accum is None:
+        return foldl(func, iterable[1:], iterable[0])
+    elif len(iterable) == 0:
+        return accum
+    else:
+        return foldl(func, iterable[1:],
+                     func(accum, iterable[0]))
+
+
+def foldr(func, iterable, accum=None):
+    """ A right-fold function
+
+        Right-associative fold, where
+
+            foldr(lambda a, b: a - b, [1, 2, 3, 4])  # returns -2
+
+        is the same as
+
+            (1 - (2 - (3 - 4)))
+
+        :param func: The function to apply to the fold. Should take two
+            arguments and return a single object.
+        :type func: callable
+        :param iterable: The iterable to accumulate over.
+        :type iterable: iterable
+        :param accum: The initial value for the accumulator. If None, the
+            initial value is set to the last object in the sequence.
+    """
+    # Reverse the iterable, only needs doing once
+    iterable.reverse()
+    if accum is None:
+        accum, iterable = iterable[0], iterable[1:]
+
+    # Make a dummy foldr function to apply things in the right order
+    def _foldr(func, iterable, accum):
+        if len(iterable) == 0:
+            return accum
+        else:
+            return _foldr(func, iterable[1:],
+                          func(iterable[0], accum))
+    return _foldr(func, iterable, accum)

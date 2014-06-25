@@ -105,20 +105,20 @@ def in_box(points, left=0, right=1, top=1, bottom=0):
 
 class GerrisReader(object):
 
-    """ Class to read and parse Gerris files
+    """ Class to read and parse Gerris simulation files
     """
 
     default_templates = dict(
-        regex=re.compile('simulation_([\.0-9]*)\.gfs'),
         gerris='/home/jess/gerris/bin/gerris2D',
         pkg_config='/home/jess/gerris/lib/pkgconfig',
         output_file_template='output_{0}.dat',
-        input_file_template='simulation_{0}.dat'
+        input_file_template='simulation_{0}.gfs'
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, vertex_file, **kwargs):
         self.templates = self.default_templates
         self.templates.update(kwargs)
+        self.input_file_regex = re.compile('simulation_([\.0-9]*)\.gfs')
 
         self.command_template = (
             'export PKG_CONFIG_PATH='
@@ -126,14 +126,25 @@ class GerrisReader(object):
             + ':${{PKG_CONFIG_PATH}}; '
             + self.templates['gerris']
             + ' -e "OutputLocation {{ istep = 1 }} '
-            + 'output_{0}.dat vertices.csv" simulation_{0}.gfs ')
+            + self.templates['output_file_template'] + ' '
+            + vertex_file + '" '
+            + self.templates['input_file_template'])
 
-    def _process_gfsfiles(self, gfsfiles):
-        output_files = []
+    def process_directory(self, directory):
+        """ Process the Gerris output files to get values at given points
+        """
+        # Get list of files to process
+        gfsfiles = sorted([f for f in os.listdir(directory)
+                           if self.input_file_regex.findall(f)])
         pbar = ProgressBar(len(gfsfiles))
+
+        # Loop through files, stash output filenames
+        output_files = []
         for idx, simfile in enumerate(gfsfiles):
+            pbar.animate(idx)
+
             # First we need to determine what everything will be called
-            time_str = self.default_templates['regex'].findall(simfile)[0]
+            time_str = self.input_file_regex.findall(simfile)[0]
             output_filename = 'output_{0}.dat'.format(time_str)
             output_files.append(output_filename)
 
@@ -152,4 +163,10 @@ class GerrisReader(object):
             except subprocess.CalledProcessError, err:
                 print err.output
                 raise err
-            pbar.animate(idx + 1)
+
+        return output_files
+
+    def read_directory(self, directory):
+        """ Read the output files in a drectory
+        """
+        pass

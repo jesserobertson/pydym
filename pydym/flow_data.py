@@ -41,9 +41,12 @@ class FlowData(object):
         super(FlowData, self).__init__()
         for datum in data:
             self._data = FlowDatum(*datum)
+        self._snapshot_array = None
 
     @property
     def snapshot_array(self):
         """ Returns the snapshot array for the data
         """
-        return numpy.vstack((datum.velocities for datum in self.data))
+        if not self._snapshot_array:
+            numpy.vstack((datum.velocities for datum in self.data))
+        return self._snapshow_array

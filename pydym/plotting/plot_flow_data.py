@@ -1,4 +1,4 @@
-""" file:   plot_flow_data.py (pydym)
+""" file:   plot_flow_data.py (pydym,plotting)
     author: Jess Robertson
             CSIRO Minerals Resources Flagship
     date:   Tuesday 24 June 2014
@@ -8,4 +8,6 @@
 
 import matplotlib.pyplot as plt
 
-def plot_flow_data
+
+def plot_flow_data():
+    pass
