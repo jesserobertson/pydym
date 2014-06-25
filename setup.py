@@ -23,7 +23,10 @@ setup(
         'h5py>=2.0.0',
         'matplotlib>=1.0.0',
         'numpy>=1.8.0',
-        'scipy>=0.10.0'
+        'scipy>=0.10.0',
+        # 'slepc4py',
+        # 'petsc4py',
+        # 'mpi4py'
     ],
     test_suite='tests',
     ext_modules=[],
