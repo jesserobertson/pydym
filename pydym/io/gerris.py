@@ -130,10 +130,11 @@ class GerrisReader(object):
             + vertex_file + '" '
             + self.templates['input_file_template'])
 
-    def process_directory(self, directory, update=False):
+    def process_directory(self, update=False):
         """ Process the Gerris output files to get values at given points
         """
         # Get list of files to process
+        directory = os.getcwd()
         gfsfiles = sorted([f for f in os.listdir(directory)
                            if self.input_file_regex.findall(f)])
         pbar = ProgressBar(len(gfsfiles))
