@@ -48,5 +48,5 @@ class FlowData(object):
         """ Returns the snapshot array for the data
         """
         if not self._snapshot_array:
-            numpy.vstack((datum.velocities for datum in self.data))
+            numpy.vstack((datum.velocities for datum in self.data)).transpose()
         return self._snapshow_array
