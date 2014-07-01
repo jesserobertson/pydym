@@ -130,7 +130,7 @@ class GerrisReader(object):
             + vertex_file + '" '
             + self.templates['input_file_template'])
 
-    def process_directory(self, directory):
+    def process_directory(self, directory, update=False):
         """ Process the Gerris output files to get values at given points
         """
         # Get list of files to process
@@ -141,8 +141,6 @@ class GerrisReader(object):
         # Loop through files, stash output filenames
         output_files = []
         for idx, simfile in enumerate(gfsfiles):
-            pbar.animate(idx)
-
             # First we need to determine what everything will be called
             time_str = self.input_file_regex.findall(simfile)[0]
             output_filename = 'output_{0}.dat'.format(time_str)
@@ -152,7 +150,12 @@ class GerrisReader(object):
             # appending the data
             output_file = os.path.join(os.getcwd(), output_filename)
             if os.path.exists(output_file):
-                os.remove(output_file)
+                if update:
+                    os.remove(output_file)
+                else:
+                    # If we're not updating the result, then just skip it
+                    pbar.animate(idx + 1)
+                    continue
 
             # Call Gerris to generate the new data files
             command = self.command_template.format(time_str)
@@ -160,6 +163,8 @@ class GerrisReader(object):
                 subprocess.check_output(command,
                                         shell=True,
                                         stderr=subprocess.STDOUT)
+                pbar.animate(idx + 1)
+
             except subprocess.CalledProcessError, err:
                 print err.output
                 raise err
