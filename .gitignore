@@ -4,3 +4,5 @@ dist
 .ipynb_checkpoints
 *.dat
 vertices.csv
+*.png
+*.sublime-workspace

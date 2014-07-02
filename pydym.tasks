@@ -1,0 +1,13 @@
+ pyDyM:
+
+   ☐ Change velocities to real values
+   ☐ Set up ipython notebook to use pydym data structures
+   ☐ Streaming SVD for large problems
+   ☐ HDF5 backend for data
+ 
+ Science:
+
+   ☐ How do we identify modes across runs?
+   ☐ Maps of modes vs parameters
+   ☐ Identifying hyperbolic transport modes from spatial structures
+   ☐ Identifying higher-order hyperbolic transport modes
