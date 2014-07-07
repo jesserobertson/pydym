@@ -16,8 +16,13 @@ class ProgressBar:
         Stolen from PyMC
     """
 
-    def __init__(self, iterations):
+    def __init__(self, iterations, label=None):
         self.iterations = iterations
+        if label:
+            self.label = label + ': '
+        else:
+            self.label = ''
+
         self.prog_bar = '[]'
         self.fill_char = '*'
         self.width = 40
@@ -36,7 +41,7 @@ class ProgressBar:
         percent_done = int(round((new_amount / 100.0) * 100.0))
         all_full = self.width - 2
         num_hashes = int(round((percent_done / 100.0) * all_full))
-        self.prog_bar = ('[' + self.fill_char * num_hashes + ' '
+        self.prog_bar = (self.label + '[' + self.fill_char * num_hashes + ' '
                          * (all_full - num_hashes) + ']')
         pct_place = (len(self.prog_bar) // 2) - len(str(percent_done))
         pct_string = '%d%%' % percent_done

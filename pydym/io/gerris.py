@@ -15,6 +15,7 @@ import os
 import subprocess
 
 from ..utilities import ProgressBar
+from ..flow_data import FlowDatum, FlowData
 
 
 def read_output_file(output_file):
@@ -27,9 +28,12 @@ def read_output_file(output_file):
                   for k in fhandle.readline().split()[1:]]
 
         # Read in the rest of the file using pandas
-        data = pandas.read_table(fhandle, sep=' ', names=header)
+        datum = pandas.read_table(fhandle, sep=' ', names=header)
+        datum = FlowDatum(xs=datum['x'], ys=datum['y'],
+                          us=datum['U'], vs=datum['V'],
+                          pressure=datum['P'], tracer=datum['T'])
 
-    return data
+        return datum
 
 
 def boxes_from_gfsfile(gfsfilename):
@@ -111,14 +115,19 @@ class GerrisReader(object):
     default_templates = dict(
         gerris='/home/jess/gerris/bin/gerris2D',
         pkg_config='/home/jess/gerris/lib/pkgconfig',
-        output_file_template='output_{0}.dat',
-        input_file_template='simulation_{0}.gfs'
+        output_file_template='output_{0}\.dat',
+        input_file_template='simulation_{0}\.gfs'
     )
 
     def __init__(self, vertex_file, **kwargs):
-        self.templates = self.default_templates
+        self.templates = {}
+        self.templates.update(self.default_templates)
         self.templates.update(kwargs)
-        self.input_file_regex = re.compile('simulation_([\.0-9]*)\.gfs')
+
+        self.input_file_regex = re.compile(
+            self.templates['input_file_template'].format('([\.0-9]*)'))
+        self.output_file_regex = re.compile(
+            self.templates['output_file_template'].format('[\.0-9]*'))
 
         self.command_template = (
             'export PKG_CONFIG_PATH='
@@ -137,14 +146,15 @@ class GerrisReader(object):
         directory = os.getcwd()
         gfsfiles = sorted([f for f in os.listdir(directory)
                            if self.input_file_regex.findall(f)])
-        pbar = ProgressBar(len(gfsfiles))
 
         # Loop through files, stash output filenames
+        pbar = ProgressBar(len(gfsfiles), 'Processing files')
         output_files = []
         for idx, simfile in enumerate(gfsfiles):
             # First we need to determine what everything will be called
             time_str = self.input_file_regex.findall(simfile)[0]
-            output_filename = 'output_{0}.dat'.format(time_str)
+            output_filename = \
+                self.templates['output_file_template'].format(time_str)
             output_files.append(output_filename)
 
             # We need to delete the output file first to stop Gerris just
@@ -170,9 +180,10 @@ class GerrisReader(object):
                 print err.output
                 raise err
 
-        return output_files
-
-    def read_directory(self, directory):
-        """ Read the output files in a drectory
-        """
-        pass
+        # Generate data objects
+        data = FlowData()
+        pbar = ProgressBar(len(gfsfiles), 'Reading files')
+        for idx, fname in enumerate(output_files):
+            data.append(read_output_file(fname))
+            pbar.animate(idx + 1)
+        return data
