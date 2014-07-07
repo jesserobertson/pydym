@@ -1,4 +1,5 @@
 build
+*.hdf*
 dist
 *.egg-info
 .ipynb_checkpoints

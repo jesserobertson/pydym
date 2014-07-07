@@ -8,6 +8,7 @@
 
 from __future__ import division
 import numpy
+import h5py
 
 
 class FlowDatum(object):
@@ -22,6 +23,11 @@ class FlowDatum(object):
                                          + 1j * numpy.asarray(vs))
         self.pressure = pressure
         self.tracer = tracer
+
+        self._length = len(us)
+
+    def __len__(self):
+        return self._length
 
     @property
     def snapshot(self):
