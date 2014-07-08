@@ -149,7 +149,8 @@ class GerrisReader(object):
         """
         # Get output name
         if output_name is None:
-            output_name = os.path.basename(directory)
+            output_name = os.path.join(directory,
+                                       os.path.basename(directory) + '.hdf5')
         if os.path.exists(output_name) and not update:
             data = FlowData(output_name)
             return data
@@ -203,14 +204,17 @@ class GerrisReader(object):
             #   TODO:   Parallelize this
             #
             test_datum = read_output_file(output_files[0])
-            data = FlowData(filename=output_name,
-                            n_snapshots=len(output_files),
-                            n_samples=len(test_datum),
-                            update=True)
-            pbar = ProgressBar(len(gfsfiles), 'Reading files')
-            for idx, fname in enumerate(output_files):
-                data[idx] = read_output_file(fname)
-                pbar.animate(idx + 1)
+            if os.path.exists(output_name) and not update:
+                data = FlowData(filename=output_name)
+            else:
+                data = FlowData(filename=output_name,
+                                n_snapshots=len(output_files),
+                                n_samples=len(test_datum),
+                                update=True)
+                pbar = ProgressBar(len(gfsfiles), 'Reading files')
+                for idx, fname in enumerate(output_files):
+                    data[idx] = read_output_file(fname)
+                    pbar.animate(idx + 1)
 
         except IOError, err:
             print err
