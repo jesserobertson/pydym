@@ -126,8 +126,12 @@ class GerrisReader(object):
 
         self.input_file_regex = re.compile(
             self.templates['input_file_template'].format('([\.0-9]*)'))
+        self.templates['input_file_template'] = \
+            self.templates['input_file_template'].replace('\\', '')
         self.output_file_regex = re.compile(
             self.templates['output_file_template'].format('[\.0-9]*'))
+        self.templates['output_file_template'] = \
+            self.templates['output_file_template'].replace('\\', '')
         self.vertex_file = os.path.abspath(vertex_file)
 
         self.command_template = (
