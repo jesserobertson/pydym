@@ -53,7 +53,6 @@ class FlowData(object):
 
         # Initialize file
         self.filename = filename
-        print filename, os.path.exists(filename)
         if os.path.exists(filename) and not update:
             self._init_from_file()
         else:
@@ -65,12 +64,14 @@ class FlowData(object):
     def _init_from_file(self):
         """ Initialize the FlowData object from an HDF5 resource
         """
-        self._file = h5py.File(self.filename, 'w')
-        self.shape = self['positions/x'].shape
-        self.n_dimensions = len(self['positions'].keys())
-        self.axis_labels = self['positions'].values()
-        # self.vectors = self._file.groups.keys()
-        # self.scalars = self._file.
+        self._file = h5py.File(self.filename, 'a')
+        self.shape = self['position/x'].shape
+        self.n_dimensions = len(self['position'].keys())
+        self.axis_labels = self['position'].keys()
+        self.vectors = [n for n, v in self._file.items()
+                        if type(v) is h5py.Group]
+        self.scalars = [n for n, v in self._file.items()
+                        if type(v) is h5py.Dataset]
 
     def _init_from_arguments(self):
         """ Initialize the FlowData object from the arguments given to __init__
