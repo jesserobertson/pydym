@@ -128,6 +128,7 @@ class GerrisReader(object):
             self.templates['input_file_template'].format('([\.0-9]*)'))
         self.output_file_regex = re.compile(
             self.templates['output_file_template'].format('[\.0-9]*'))
+        self.vertex_file = os.path.abspath(vertex_file)
 
         self.command_template = (
             'export PKG_CONFIG_PATH='
@@ -136,54 +137,81 @@ class GerrisReader(object):
             + self.templates['gerris']
             + ' -e "OutputLocation {{ istep = 1 }} '
             + self.templates['output_file_template'] + ' '
-            + vertex_file + '" '
+            + self.vertex_file + '" '
             + self.templates['input_file_template'])
 
-    def process_directory(self, update=False):
+    def process_directory(self, directory, output_name=None, update=False):
         """ Process the Gerris output files to get values at given points
         """
+        # Get output name
+        if output_name is None:
+            output_name = os.path.basename(directory)
+        if os.path.exists(output_name) and not update:
+            data = FlowData(output_name)
+            return data
+        data = None
+
         # Get list of files to process
-        directory = os.getcwd()
-        gfsfiles = sorted([f for f in os.listdir(directory)
-                           if self.input_file_regex.findall(f)])
+        try:
+            current_dir = os.getcwd()
+            os.chdir(directory)
+            gfsfiles = sorted([f for f in os.listdir(directory)
+                               if self.input_file_regex.findall(f)])
 
-        # Loop through files, stash output filenames
-        pbar = ProgressBar(len(gfsfiles), 'Processing files')
-        output_files = []
-        for idx, simfile in enumerate(gfsfiles):
-            # First we need to determine what everything will be called
-            time_str = self.input_file_regex.findall(simfile)[0]
-            output_filename = \
-                self.templates['output_file_template'].format(time_str)
-            output_files.append(output_filename)
+            # Loop through files, stash output filenames
+            #
+            #   TODO:   Parallelize this
+            #
+            pbar = ProgressBar(len(gfsfiles), 'Processing files')
+            output_files = []
+            for idx, simfile in enumerate(gfsfiles):
+                # First we need to determine what everything will be called
+                time_str = self.input_file_regex.findall(simfile)[0]
+                output_filename = \
+                    self.templates['output_file_template'].format(time_str)
+                output_files.append(output_filename)
 
-            # We need to delete the output file first to stop Gerris just
-            # appending the data
-            output_file = os.path.join(os.getcwd(), output_filename)
-            if os.path.exists(output_file):
-                if update:
-                    os.remove(output_file)
-                else:
-                    # If we're not updating the result, then just skip it
+                # We need to delete the output file first to stop Gerris just
+                # appending the data
+                output_file = os.path.join(os.getcwd(), output_filename)
+                if os.path.exists(output_file):
+                    if update:
+                        os.remove(output_file)
+                    else:
+                        # If we're not updating the result, then just skip it
+                        pbar.animate(idx + 1)
+                        continue
+
+                # Call Gerris to generate the new data files
+                command = self.command_template.format(time_str)
+                try:
+                    subprocess.check_output(command,
+                                            shell=True,
+                                            stderr=subprocess.STDOUT)
                     pbar.animate(idx + 1)
-                    continue
 
-            # Call Gerris to generate the new data files
-            command = self.command_template.format(time_str)
-            try:
-                subprocess.check_output(command,
-                                        shell=True,
-                                        stderr=subprocess.STDOUT)
+                except subprocess.CalledProcessError, err:
+                    print err.output
+                    raise err
+
+            # Generate data objects
+            #
+            #   TODO:   Parallelize this
+            #
+            test_datum = read_output_file(output_files[0])
+            data = FlowData(filename=output_name,
+                            n_snapshots=len(output_files),
+                            n_samples=len(test_datum),
+                            update=True)
+            pbar = ProgressBar(len(gfsfiles), 'Reading files')
+            for idx, fname in enumerate(output_files):
+                data[idx] = read_output_file(fname)
                 pbar.animate(idx + 1)
 
-            except subprocess.CalledProcessError, err:
-                print err.output
-                raise err
+        except IOError, err:
+            print err
 
-        # Generate data objects
-        data = FlowData()
-        pbar = ProgressBar(len(gfsfiles), 'Reading files')
-        for idx, fname in enumerate(output_files):
-            data.append(read_output_file(fname))
-            pbar.animate(idx + 1)
+        finally:
+            os.chdir(current_dir)
+
         return data

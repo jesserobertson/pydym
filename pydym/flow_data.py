@@ -9,6 +9,7 @@
 from __future__ import division
 import numpy
 import h5py
+import os
 
 
 class FlowDatum(object):
@@ -16,11 +17,10 @@ class FlowDatum(object):
     """ A class to store velocity data from a flow visualisation
     """
 
-    def __init__(self, xs, ys, us, vs, pressure=None, tracer=None):
+    def __init__(self, xs, ys, us, vs, pressure, tracer):
         super(FlowDatum, self).__init__()
-        self.positions = numpy.vstack([xs, ys]).transpose()
-        self._velocities = numpy.asarray(numpy.asarray(us)
-                                         + 1j * numpy.asarray(vs))
+        self.position = numpy.vstack([xs, ys]).transpose()
+        self.velocity = numpy.vstack([us, vs]).transpose()
         self.pressure = pressure
         self.tracer = tracer
 
@@ -29,58 +29,124 @@ class FlowDatum(object):
     def __len__(self):
         return self._length
 
-    @property
-    def snapshot(self):
-        """ Return the stored velocities as a vector of complex numbers
-        """
-        return self._velocities
-
-    @property
-    def velocities(self):
-        return numpy.asarray([self._velocities.real, self._velocities.imag])
-
 
 class FlowData(object):
 
     """ A class to store velocity data from a collection of flow visualisations
     """
 
-    def __init__(self):
+    default_axis_labels = ('x', 'y', 'z')
+
+    def __init__(self, filename,
+                 n_snapshots=None, n_samples=None, n_dimensions=2,
+                 vector_datasets=('position', 'velocity'),
+                 scalar_datasets=('pressure', 'tracer'),
+                 update=False):
         super(FlowData, self).__init__()
-        self._data = []
+
+        # Set own attributes to be stored as file attributes
+        self.shape = (n_snapshots, n_samples)
+        self.n_dimensions = n_dimensions
+        self.axis_labels = \
+            [self.default_axis_labels[i] for i in range(self.n_dimensions)]
+        self.vectors, self.scalars = vector_datasets, scalar_datasets
+
+        # Initialize file
+        self.filename = filename
+        print filename, os.path.exists(filename)
+        if os.path.exists(filename) and not update:
+            self._init_from_file()
+        else:
+            self._init_from_arguments()
+
         self._recalc_snapshots = True
-        self._snapshot_array = None
+        self._snapshots = None
 
-    def __iter__(self):
-        return (d for d in self._data)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __getitem__(self, idx):
-        return self._data[idx]
-
-    def __setitem__(self, idx, value):
-        """ Set the value at the given index
+    def _init_from_file(self):
+        """ Initialize the FlowData object from an HDF5 resource
         """
-        if type(value) is not FlowDatum:
+        self._file = h5py.File(self.filename, 'w')
+        self.shape = self['positions/x'].shape
+        self.n_dimensions = len(self['positions'].keys())
+        self.axis_labels = self['positions'].values()
+        # self.vectors = self._file.groups.keys()
+        # self.scalars = self._file.
+
+    def _init_from_arguments(self):
+        """ Initialize the FlowData object from the arguments given to __init__
+        """
+        # Check inputs to __init__ are specced
+        if any((s is None for s in self.shape)):
+            raise ValueError('You must specify a shape for a new FlowData '
+                             'object created from scratch')
+
+        # Create file - ensure any existing files are deleted (which may be the
+        # case if update=True in __init__)
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
+        self._file = h5py.File(self.filename, 'w')
+
+        # Map out vector datasets
+        for dset_name in self.vectors:
+            grp = self._file.create_group(dset_name)
+            for dim_idx in range(self.n_dimensions):
+                grp.require_dataset(name=self.axis_labels[dim_idx],
+                                    shape=self.shape,
+                                    dtype=float)
+
+        # Map out scalar datasets
+        for dset_name in self.scalars:
+            self._file.require_dataset(name=dset_name,
+                                       shape=self.shape,
+                                       dtype=float)
+
+    def __getitem__(self, value_or_key):
+        """ Get the data associated with a given index or key
+
+            If value_or_key is an integer index, return the FlowDatum object
+            associated with that snapshot. If value_or_key is a string, return
+            the h5py.Dataset object for that string.
+        """
+        if type(value_or_key) is int:
+            # We have an index
+            idx = value_or_key
+
+            # Reconstruct FlowDatum
+            return FlowDatum(
+                xs=self['position/x'][idx], ys=self['position/y'][idx],
+                us=self['velocity/x'][idx], vs=self['velocity/y'][idx],
+                pressure=self['pressure'][idx],
+                tracer=self['tracer'][idx])
+        else:
+            # We have a key
+            return self._file[value_or_key]
+
+    def __setitem__(self, idx, flow_datum):
+        """ Set the snapshot data at the given index
+        """
+        if type(flow_datum) is not FlowDatum:
             raise ValueError("Trying to append non-FlowDatum object to "
                              "FlowData collection")
-        else:
-            self._data[idx] = value
-            self._recalc_snapshots = True
 
-    @property
-    def snapshots(self):
+        # Append vector data in the right places
+        for dset in self.vectors:
+            values = getattr(flow_datum, dset)
+            if values is not None:
+                for aidx, axis in enumerate(self.axis_labels):
+                    self._file[dset + '/' + axis][idx] = values[:, aidx]
+
+        # Update scalar data
+        for dset in self.scalars:
+            values = getattr(flow_datum, dset)
+            if values is not None:
+                self._file[dset][idx] = values
+
+        self._recalc_snapshots = True
+
+    def snapshots(self, snapshot_keys):
         """ Returns the snapshot array for the data
         """
         if self._recalc_snapshots:
             numpy.vstack(
                 (datum.velocities for datum in self._data)).transpose()
         return self._snapshow_array
-
-    def append(self, *data):
-        """ Append the data to the collection
-        """
-        self._data.extend(data)
-        self._recalc_snapshots = True

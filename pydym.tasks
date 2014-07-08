@@ -1,7 +1,7 @@
  pyDyM:
 
    ☐ Change velocities to real values
-   ☐ Set up ipython notebook to use pydym data structures
+   ✔ Set up ipython notebook to use pydym data structures @done (14-07-08 09:15)
    ☐ Streaming SVD for large problems
    ☐ HDF5 backend for data
  
