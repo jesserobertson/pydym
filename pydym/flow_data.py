@@ -37,29 +37,27 @@ class FlowData(object):
 
     default_axis_labels = ('x', 'y', 'z')
 
-    def __init__(self, filename,
+    def __init__(self, filename, snapshot_keys = ('velocity'),
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('position', 'velocity'),
                  scalar_datasets=('pressure', 'tracer'),
                  update=False):
         super(FlowData, self).__init__()
-
-        # Set own attributes to be stored as file attributes
         self.shape = (n_snapshots, n_samples)
         self.n_dimensions = n_dimensions
         self.axis_labels = \
             [self.default_axis_labels[i] for i in range(self.n_dimensions)]
         self.vectors, self.scalars = vector_datasets, scalar_datasets
+        self.set_snapshot_datasets(snapshot_keys)
+        self._snapshots = None
 
         # Initialize file
         self.filename = filename
+        self._file = None
         if os.path.exists(filename) and not update:
             self._init_from_file()
         else:
             self._init_from_arguments()
-
-        self._recalc_snapshots = True
-        self._snapshots = None
 
     def _init_from_file(self):
         """ Initialize the FlowData object from an HDF5 resource
@@ -93,13 +91,15 @@ class FlowData(object):
             for dim_idx in range(self.n_dimensions):
                 grp.require_dataset(name=self.axis_labels[dim_idx],
                                     shape=self.shape,
-                                    dtype=float)
+                                    dtype=float,
+                                    compression="gzip")
 
         # Map out scalar datasets
         for dset_name in self.scalars:
             self._file.require_dataset(name=dset_name,
                                        shape=self.shape,
-                                       dtype=float)
+                                       dtype=float,
+                                       compression="gzip")
 
     def __getitem__(self, value_or_key):
         """ Get the data associated with a given index or key
@@ -144,10 +144,31 @@ class FlowData(object):
 
         self._recalc_snapshots = True
 
+    @property
     def snapshots(self, snapshot_keys):
         """ Returns the snapshot array for the data
         """
-        if self._recalc_snapshots:
-            numpy.vstack(
-                (datum.velocities for datum in self._data)).transpose()
-        return self._snapshow_array
+        if not self._snapshots:
+            self._generate_snapshots()
+        return self._snapshots
+
+    def set_snapshot_datasets(self, snapshot_keys):
+        """ Set the datasets used to generate snapshots
+        """
+        self.snapshot_keys = snapshot_keys
+        self._snapshots = None
+
+    def _generate_snapshots(self):
+        """ Generate the snapshots
+        """
+        # Make snapshot dataset
+        dset_name = '_'.join(self.snapshot_keys)
+        n_measurements = len(self.snapshot_keys)
+        snapshot_size = (n_measurements * self.shape[0], self.shape[1])
+        snapshot_grp = self._file.require_group('snapshots')
+        self._snapshots = snapshot_grp.require_dataset(
+            name=dset_name, shape=snapshot_size,
+            dtype=float, compression="gzip")
+
+        # Copy over dataset data
+        

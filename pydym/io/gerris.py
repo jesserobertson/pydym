@@ -144,8 +144,8 @@ class GerrisReader(object):
             + self.vertex_file + '" '
             + self.templates['input_file_template'])
 
-    def process_directory(self, directory,
-                          output_name=None, update=False, clean=False):
+    def process_directory(self, directory, output_name=None,
+                          update=False, clean=False, show_progress=True):
         """ Process the Gerris output files to get values at given points
 
             :param directory: The directory to process
@@ -161,10 +161,13 @@ class GerrisReader(object):
             :param clean: If True, remove temporary data files after they've
                 been added to the HDF5 file. Optional, defaults to False.
             :type clean: bool
+            :param show_progress: If True, prints a progress bar. Optional,
+                defaults to True
+            :type show_progress: bool
         """
         # Get output name
         if output_name is None:
-            output_name = os.path.join(directory,
+            output_name = os.path.join(os.path.abspath(directory),
                                        os.path.basename(directory) + '.hdf5')
 
         # Get list of files to process
@@ -177,21 +180,27 @@ class GerrisReader(object):
 
             else:
                 data = None
-                gfsfiles = sorted([f for f in os.listdir(directory)
+                gfsfiles = sorted([f for f in os.listdir('.')
                                    if self.input_file_regex.findall(f)])
-                pbar = ProgressBar(len(gfsfiles), 'Processing files')
+                if show_progress:
+                    pbar = ProgressBar(len(gfsfiles), 'Processing files')
 
                 for idx, simfile in enumerate(gfsfiles):
                     # First we need to determine what everything will be called
                     time_str = self.input_file_regex.findall(simfile)[0]
                     output_filename = \
                         self.templates['output_file_template'].format(time_str)
-                    output_filename = os.path.join(os.getcwd(),
-                                                   output_filename)
+                    output_filename = os.path.join(
+                        os.path.abspath(os.getcwd()),
+                        output_filename)
 
-                    # Call Gerris to generate the new data files
+                    # If we're updating, we need to remove any existing output
+                    # or Gerris will just append the new data to the file
                     if os.path.exists(output_filename) and update:
                         os.remove(output_filename)
+
+                    # Call Gerris to generate the new data files
+                    if not os.path.exists(output_filename):
                         try:
                             subprocess.check_output(
                                 self.command_template.format(time_str),
@@ -208,6 +217,7 @@ class GerrisReader(object):
                                         n_snapshots=len(gfsfiles),
                                         n_samples=len(datum),
                                         update=True)
+                        data[0] = datum
 
                     else:
                         data[idx] = read_output_file(output_filename)
@@ -215,7 +225,8 @@ class GerrisReader(object):
                     # Clean up if required
                     if clean:
                         os.remove(output_filename)
-                    pbar.animate(idx + 1)
+                    if show_progress:
+                        pbar.animate(idx + 1)
 
         except IOError, err:
             print err
