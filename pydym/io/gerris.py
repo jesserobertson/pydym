@@ -144,76 +144,77 @@ class GerrisReader(object):
             + self.vertex_file + '" '
             + self.templates['input_file_template'])
 
-    def process_directory(self, directory, output_name=None, update=False):
+    def process_directory(self, directory,
+                          output_name=None, update=False, clean=False):
         """ Process the Gerris output files to get values at given points
+
+            :param directory: The directory to process
+            :type directory: string
+            :param output_name: The name for the output HDF5 file. Optional, if
+                not specified it defaults to <directory>/<directory>.hdf5
+            :type output_name: string
+            :param update: Whether to update the files if they already exist.
+                If the directory already has an HDF5 file with the given
+                output_name and update is False, then this file is just loaded,
+                rather than reprocessing the data. Optional, defaults to False.
+            :type update: bool
+            :param clean: If True, remove temporary data files after they've
+                been added to the HDF5 file. Optional, defaults to False.
+            :type clean: bool
         """
         # Get output name
         if output_name is None:
             output_name = os.path.join(directory,
                                        os.path.basename(directory) + '.hdf5')
-        if os.path.exists(output_name) and not update:
-            data = FlowData(output_name)
-            return data
-        data = None
 
         # Get list of files to process
         try:
             current_dir = os.getcwd()
             os.chdir(directory)
-            gfsfiles = sorted([f for f in os.listdir(directory)
-                               if self.input_file_regex.findall(f)])
-
-            # Loop through files, stash output filenames
-            #
-            #   TODO:   Parallelize this
-            #
-            pbar = ProgressBar(len(gfsfiles), 'Processing files')
-            output_files = []
-            for idx, simfile in enumerate(gfsfiles):
-                # First we need to determine what everything will be called
-                time_str = self.input_file_regex.findall(simfile)[0]
-                output_filename = \
-                    self.templates['output_file_template'].format(time_str)
-                output_files.append(output_filename)
-
-                # We need to delete the output file first to stop Gerris just
-                # appending the data
-                output_file = os.path.join(os.getcwd(), output_filename)
-                if os.path.exists(output_file):
-                    if update:
-                        os.remove(output_file)
-                    else:
-                        # If we're not updating the result, then just skip it
-                        pbar.animate(idx + 1)
-                        continue
-
-                # Call Gerris to generate the new data files
-                command = self.command_template.format(time_str)
-                try:
-                    subprocess.check_output(command,
-                                            shell=True,
-                                            stderr=subprocess.STDOUT)
-                    pbar.animate(idx + 1)
-
-                except subprocess.CalledProcessError, err:
-                    print err.output
-                    raise err
-
-            # Generate data objects
-            #
-            #   TODO:   Parallelize this
-            #
-            test_datum = read_output_file(output_files[0])
+            # If the data already exists, then just load it
             if os.path.exists(output_name) and not update:
                 data = FlowData(filename=output_name)
+
             else:
-                data = FlowData(filename=output_name,
-                                n_snapshots=len(output_files),
-                                n_samples=len(test_datum),
-                                update=True)
-                pbar = ProgressBar(len(gfsfiles), 'Reading files')
-                for idx, fname in enumerate(output_files):
-                    data[idx] = read_output_file(fname)
+                data = None
+                gfsfiles = sorted([f for f in os.listdir(directory)
+                                   if self.input_file_regex.findall(f)])
+                pbar = ProgressBar(len(gfsfiles), 'Processing files')
+
+                for idx, simfile in enumerate(gfsfiles):
+                    # First we need to determine what everything will be called
+                    time_str = self.input_file_regex.findall(simfile)[0]
+                    output_filename = \
+                        self.templates['output_file_template'].format(time_str)
+                    output_filename = os.path.join(os.getcwd(),
+                                                   output_filename)
+
+                    # Call Gerris to generate the new data files
+                    if os.path.exists(output_filename) and update:
+                        os.remove(output_filename)
+                        try:
+                            subprocess.check_output(
+                                self.command_template.format(time_str),
+                                shell=True,
+                                stderr=subprocess.STDOUT)
+                        except subprocess.CalledProcessError, err:
+                            print err.output
+                            raise err
+
+                    # Generate data objects
+                    if not data:
+                        datum = read_output_file(output_filename)
+                        data = FlowData(filename=output_name,
+                                        n_snapshots=len(gfsfiles),
+                                        n_samples=len(datum),
+                                        update=True)
+
+                    else:
+                        data[idx] = read_output_file(output_filename)
+
+                    # Clean up if required
+                    if clean:
+                        os.remove(output_filename)
                     pbar.animate(idx + 1)
 
         except IOError, err:
