@@ -114,3 +114,19 @@ def foldr(func, iterable, accum=None):
             return _foldr(func, iterable[1:],
                           func(iterable[0], accum))
     return _foldr(func, iterable, accum)
+
+
+def thinned_length(length, thin_by):
+    """ Returns the length of a sequence thinned by taking every `thin_by`th
+        element
+
+        :param length: The original sequence length
+        :type length: int
+        :param thin_by: The stride length
+        :type thin_by: int
+    """
+    thin_by = abs(thin_by)  # Remove negative stride if necessary
+    if not(length % thin_by):
+        return length // thin_by
+    else:
+        return length // thin_by + 1
