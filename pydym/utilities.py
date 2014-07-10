@@ -102,7 +102,7 @@ def foldr(func, iterable, accum=None):
             initial value is set to the last object in the sequence.
     """
     # Reverse the iterable, only needs doing once
-    iterable.reverse()
+    iterable = iterable[::-1]
     if accum is None:
         accum, iterable = iterable[0], iterable[1:]
 

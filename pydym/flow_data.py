@@ -44,20 +44,20 @@ class FlowData(object):
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('position', 'velocity'),
                  scalar_datasets=('pressure', 'tracer'),
-                 update=False):
+                 update=False, thin_by=None):
         super(FlowData, self).__init__()
         self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
         self.filename = filename
-        self.set_snapshot_datasets(snapshot_keys)
         self.vectors, self.scalars = vector_datasets, scalar_datasets
 
-        # Determine shapes and labels
+        # Set up snapshot datasets
+        self.snapshot_keys = snapshot_keys
+        self.thin_by = thin_by
         self.shape = (self.n_samples, self.n_snapshots)
         self.axis_labels = \
             [self.default_axis_labels[i] for i in range(self.n_dimensions)]
         self._snapshots = None
-        self.thin_by = None
 
         # Initialize file
         self._file = None
@@ -180,37 +180,51 @@ class FlowData(object):
             self.generate_snapshots()
         return self._snapshots
 
-    def set_snapshot_datasets(self, snapshot_keys):
-        """ Set the datasets used to generate snapshots
+    @property
+    def modes(self):
+        """ Return the dynamic modes from the given snapshots.
+
+            Uses the currently set snapshot_keys by default
         """
-        self.snapshot_keys = snapshot_keys
-        self._snapshots = None
+        pass
 
-    def thin_snapshots(self, thin_by):
-        """ Thin the snapshot sequence by taking only every nth snapshot
+    def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
+        """ Set the properties used to generate snapshots
 
+            :param snapshot_keys: The datasets used to generate the snapshot
+                arrays
+            :type snapshot_keys: list of strings
             :param thin_by: Take every 'thin_by' snapshots. `thin_by = None`
                 removes thinning.
             :type thin_by: int or None
         """
-        self.thin_by = thin_by
+        if snapshot_keys is not None:
+            self.snapshot_keys = snapshot_keys
+        if thin_by is not None:
+            self.thin_by = thin_by
         self._snapshots = None
+
+    @property
+    def snapshot_dataset_key(self):
+        """ Return the snapshot datset key for the current snapshot dataset
+        """
+        # Make snapshot dataset
+        key = '_'.join(self.snapshot_keys)
+        if self.thin_by:
+            key += '_thin_by_{0}'.format(self.thin_by)
+        return key
 
     def generate_snapshots(self):
         """ Generate the snapshots
         """
-        # Make snapshot dataset
-        dset_name = '_'.join(self.snapshot_keys)
-        if self.thin_by:
-            dset_name += '_thin_by_{0}'.format(self.thin_by)
-
         # Determine number of measurements per sample - need to include fact
         # that vector snapshots have more samples
         vector_components = [key + '/' + ax
                              for ax, key in product(self.axis_labels,
                                                     self.snapshot_keys)
                              if key in self.vectors]
-        scalar_components = [key for key in self.snapshot_keys
+        scalar_components = [key.replace('/', '_')
+                             for key in self.snapshot_keys
                              if key not in self.vectors]
         all_components = tuple(vector_components + scalar_components)
         n_components = len(all_components)
@@ -224,9 +238,11 @@ class FlowData(object):
 
         # Generate group for snapshots
         snapshot_grp = self._file.require_group('snapshots')
+        if self.snapshot_dataset_key in snapshot_grp.keys():
+            del snapshot_grp[self.snapshot_dataset_key]
         self._snapshots = snapshot_grp.require_dataset(
-            name=dset_name, shape=snapshot_size,
-            dtype=float, compression="gzip")
+            name=self.snapshot_dataset_key, shape=snapshot_size, dtype=float,
+            compression="gzip")
         self._snapshots.attrs['keys'] = ','.join(all_components)
 
         # Copy over dataset data

@@ -8,6 +8,7 @@
 
 import unittest
 import os
+import numpy
 
 from pydym import FlowData
 
@@ -30,6 +31,7 @@ class FlowDataTest(unittest.TestCase):
         """
         expected_keys = set(('velocity', 'position', 'pressure', 'tracer',
                              'snapshots'))
+        self.assertIsNone(self.data.thin_by)
         for key in self.data.keys():
             self.assertTrue(key in expected_keys)
             self.assertIsNotNone(self.data[key])
@@ -40,6 +42,20 @@ class FlowDataTest(unittest.TestCase):
         default_snapshot = 'velocity'
         self.assertIsNotNone(self.data.snapshots)
         self.assertIsNotNone(self.data['snapshots/' + default_snapshot])
+
+    def test_change_snapshots(self):
+        """ Check that we can change snapshots back and forth
+        """
+        old_snapshot = self.data.snapshots
+        print '\n', self.data['snapshots'].keys()
+        self.data.set_snapshot_properties(snapshot_keys=['pressure', 'velocity'])
+        self.assertIsNotNone(self.data.snapshots)
+        self.assertIsNotNone(self.data['snapshots/pressure_velocity'])
+        print '\n', self.data['snapshots'].keys()
+        self.data.set_snapshot_properties(snapshot_keys=['velocity'])
+        self.assertIsNotNone(self.data.snapshots)
+        self.assertIsNotNone(self.data['snapshots/velocity'])
+        self.assertIsNotNone(numpy.allclose(self.data.snapshots, old_snapshot))
 
     def test_get_item(self):
         """ Check that we can return simulation stuff
