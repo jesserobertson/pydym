@@ -57,6 +57,7 @@ class FlowData(object):
         self.axis_labels = \
             [self.default_axis_labels[i] for i in range(self.n_dimensions)]
         self._snapshots = None
+        self.thin_by = None
 
         # Initialize file
         self._file = None
@@ -70,6 +71,7 @@ class FlowData(object):
         """
         self._file = h5py.File(self.filename, 'a')
         self.shape = self['position/x'].shape
+        self.n_samples, self.n_snapshots = self.shape
         self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
         self.vectors = [n for n, v in self._file.items()
@@ -150,6 +152,26 @@ class FlowData(object):
 
         self._recalc_snapshots = True
 
+    def close(self):
+        """ Close the underlying HDF5 file
+        """
+        self._file.close()
+
+    def keys(self):
+        """ Return an iterator over the available keys
+        """
+        return self._file.keys()
+
+    def items(self):
+        """ Return an iterator over the datasets keys and HDF5 datasets
+        """
+        return self._file.items()
+
+    def values(self):
+        """ Return an iterator over the top-level HDF5 datasets and groups
+        """
+        return self._file.values()
+
     @property
     def snapshots(self):
         """ Returns the snapshot array for the data
@@ -205,7 +227,7 @@ class FlowData(object):
         self._snapshots = snapshot_grp.require_dataset(
             name=dset_name, shape=snapshot_size,
             dtype=float, compression="gzip")
-        self._snapshots.attrs['keys'] = all_components
+        self._snapshots.attrs['keys'] = ','.join(all_components)
 
         # Copy over dataset data
         for idx, key in enumerate(all_components):

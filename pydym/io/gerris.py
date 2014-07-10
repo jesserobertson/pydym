@@ -122,8 +122,14 @@ class GerrisReader(object):
     def __init__(self, vertex_file, **kwargs):
         self.templates = {}
         self.templates.update(self.default_templates)
+
+        # Find Gerris on this system
+        self.templates['gerris'] = \
+            subprocess.check_output('which gerris2D', shell=True)
+        self.templates['gerris'] = self.templates['gerris'].strip('\n')
         self.templates.update(kwargs)
 
+        # Generate regexes for simulation files and output files
         self.input_file_regex = re.compile(
             self.templates['input_file_template'].format('([\.0-9]*)'))
         self.templates['input_file_template'] = \
@@ -133,16 +139,6 @@ class GerrisReader(object):
         self.templates['output_file_template'] = \
             self.templates['output_file_template'].replace('\\', '')
         self.vertex_file = os.path.abspath(vertex_file)
-
-        self.command_template = (
-            'export PKG_CONFIG_PATH='
-            + self.templates['pkg_config']
-            + ':${{PKG_CONFIG_PATH}}; '
-            + self.templates['gerris']
-            + ' -e "OutputLocation {{ istep = 1 }} '
-            + self.templates['output_file_template'] + ' '
-            + self.vertex_file + '" '
-            + self.templates['input_file_template'])
 
     def process_directory(self, directory, output_name=None,
                           update=False, clean=False, show_progress=True):
@@ -170,6 +166,16 @@ class GerrisReader(object):
             output_name = os.path.join(os.path.abspath(directory),
                                        os.path.basename(directory) + '.hdf5')
 
+        # Set Gerris command string
+        self.command_template = (
+            self.templates['gerris']
+            + ' -e "OutputLocation {{ istep = 1 }} '
+            + os.path.abspath(directory) + '/'
+            + self.templates['output_file_template'] + ' '
+            + self.vertex_file + '" '
+            + os.path.abspath(directory) + '/'
+            + self.templates['input_file_template'])
+
         # Get list of files to process
         try:
             current_dir = os.getcwd()
@@ -189,7 +195,8 @@ class GerrisReader(object):
                     # First we need to determine what everything will be called
                     time_str = self.input_file_regex.findall(simfile)[0]
                     output_filename = \
-                        self.templates['output_file_template'].format(time_str)
+                        self.templates['output_file_template'].format(
+                            time_str, os.path.dirname(simfile))
                     output_filename = os.path.join(
                         os.path.abspath(os.getcwd()),
                         output_filename)
