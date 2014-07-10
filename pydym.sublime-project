@@ -12,6 +12,12 @@
 			"name": "Source",
 			"folder_exclude_patterns": [],
 			"file_exclude_patterns": ["*.pyc"]
+		},
+		{
+			"path": "tests",
+			"name": "Tests",
+			"folder_exclude_patterns": [],
+			"file_exclude_patterns": ["*.pyc"]
 		}
 	],
 	"settings":
