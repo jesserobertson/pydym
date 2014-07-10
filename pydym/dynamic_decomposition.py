@@ -33,13 +33,13 @@ def dynamic_decomposition(flow_data, return_svd=False):
             U, Sigma, V
     """
     # Subdivide the time sequence into the past and current states
-    past = flow_data.snapshot_array[:-1]
-    current = flow_data.snapshot_array[1:]
+    past = flow_data.snapshots[:, :-1]
+    current = flow_data.snapshots[:, 1:]
 
     # Calculate SVD of past data array
     U, sigma, Vstar = svd(past, full_matrices=False)
 
-    # Calculate apprioximate dynamic array
+    # Calculate apprioximate dynamic array given current data
     S = foldr(numpy.dot, (herm_transpose(U), current, herm_transpose(Vstar),
                           numpy.diag(1 / sigma)))
 
