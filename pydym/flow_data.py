@@ -12,7 +12,8 @@ import h5py
 import os
 from itertools import product
 
-from .utilities import thinned_length
+from .dynamic_decomposition import dynamic_decomposition
+from .utilities import thinned_length, herm_transpose
 
 
 class FlowDatum(object):
@@ -180,13 +181,31 @@ class FlowData(object):
             self.generate_snapshots()
         return self._snapshots
 
-    @property
-    def modes(self):
+    def get_spatial_mode(self):
         """ Return the dynamic modes from the given snapshots.
 
             Uses the currently set snapshot_keys by default
         """
         pass
+
+    def calculate_decomp(self):
+        """ Calculate the dynamic modes from the current shapshot
+        """
+        S, U, sigma, Vstar = dynamic_decomposition(self, return_svd=True)
+        V = herm_transpose(Vstar)
+        mode_dict = {
+            'operator': S,
+            'spatial': U,
+            'coeffs': sigma,
+            'temporal': V
+        }
+        mode_grp = self._file.require_group('modes')
+        for key, values in mode_dict.items():
+            dset = mode_grp.require_dataset(
+                name=self.snapshot_dataset_key + '_' + key,
+                shape=values.shape,
+                dtype=values.dtype)
+            dset[...] = values
 
     def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
         """ Set the properties used to generate snapshots
