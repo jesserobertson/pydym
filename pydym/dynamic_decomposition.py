@@ -10,13 +10,7 @@ from __future__ import division
 import numpy
 from numpy.linalg import svd
 
-from .utilities import foldr
-
-
-def herm_transpose(array):
-    """ Returns the Hermitian transpose of a complex matrix
-    """
-    return array.conj().transpose()
+from .utilities import foldr, herm_transpose
 
 
 def dynamic_decomposition(flow_data, return_svd=False):

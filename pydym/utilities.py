@@ -9,6 +9,12 @@
 import sys
 
 
+def herm_transpose(array):
+    """ Returns the Hermitian transpose of a complex matrix
+    """
+    return array.conj().transpose()
+
+
 class ProgressBar:
 
     """ A progress bar class which will work in Python and IPython
