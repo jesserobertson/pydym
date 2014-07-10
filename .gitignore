@@ -7,3 +7,4 @@ dist
 vertices.csv
 *.png
 *.sublime-workspace
+*.pyc
