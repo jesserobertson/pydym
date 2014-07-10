@@ -10,6 +10,9 @@ from __future__ import division
 import numpy
 import h5py
 import os
+from itertools import product
+
+from .utilities import thinned_length
 
 
 class FlowDatum(object):
@@ -19,8 +22,8 @@ class FlowDatum(object):
 
     def __init__(self, xs, ys, us, vs, pressure, tracer):
         super(FlowDatum, self).__init__()
-        self.position = numpy.vstack([xs, ys]).transpose()
-        self.velocity = numpy.vstack([us, vs]).transpose()
+        self.position = numpy.vstack([xs, ys])
+        self.velocity = numpy.vstack([us, vs])
         self.pressure = pressure
         self.tracer = tracer
 
@@ -37,22 +40,25 @@ class FlowData(object):
 
     default_axis_labels = ('x', 'y', 'z')
 
-    def __init__(self, filename, snapshot_keys = ('velocity'),
+    def __init__(self, filename, snapshot_keys=('velocity',),
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('position', 'velocity'),
                  scalar_datasets=('pressure', 'tracer'),
                  update=False):
         super(FlowData, self).__init__()
-        self.shape = (n_snapshots, n_samples)
+        self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
+        self.filename = filename
+        self.set_snapshot_datasets(snapshot_keys)
+        self.vectors, self.scalars = vector_datasets, scalar_datasets
+
+        # Determine shapes and labels
+        self.shape = (self.n_samples, self.n_snapshots)
         self.axis_labels = \
             [self.default_axis_labels[i] for i in range(self.n_dimensions)]
-        self.vectors, self.scalars = vector_datasets, scalar_datasets
-        self.set_snapshot_datasets(snapshot_keys)
         self._snapshots = None
 
         # Initialize file
-        self.filename = filename
         self._file = None
         if os.path.exists(filename) and not update:
             self._init_from_file()
@@ -134,22 +140,22 @@ class FlowData(object):
             values = getattr(flow_datum, dset)
             if values is not None:
                 for aidx, axis in enumerate(self.axis_labels):
-                    self._file[dset + '/' + axis][idx] = values[:, aidx]
+                    self._file[dset + '/' + axis][:, idx] = values[aidx]
 
         # Update scalar data
         for dset in self.scalars:
             values = getattr(flow_datum, dset)
             if values is not None:
-                self._file[dset][idx] = values
+                self._file[dset][:, idx] = values
 
         self._recalc_snapshots = True
 
     @property
-    def snapshots(self, snapshot_keys):
+    def snapshots(self):
         """ Returns the snapshot array for the data
         """
         if not self._snapshots:
-            self._generate_snapshots()
+            self.generate_snapshots()
         return self._snapshots
 
     def set_snapshot_datasets(self, snapshot_keys):
@@ -158,17 +164,53 @@ class FlowData(object):
         self.snapshot_keys = snapshot_keys
         self._snapshots = None
 
-    def _generate_snapshots(self):
+    def thin_snapshots(self, thin_by):
+        """ Thin the snapshot sequence by taking only every nth snapshot
+
+            :param thin_by: Take every 'thin_by' snapshots. `thin_by = None`
+                removes thinning.
+            :type thin_by: int or None
+        """
+        self.thin_by = thin_by
+        self._snapshots = None
+
+    def generate_snapshots(self):
         """ Generate the snapshots
         """
         # Make snapshot dataset
         dset_name = '_'.join(self.snapshot_keys)
-        n_measurements = len(self.snapshot_keys)
-        snapshot_size = (n_measurements * self.shape[0], self.shape[1])
+        if self.thin_by:
+            dset_name += '_thin_by_{0}'.format(self.thin_by)
+
+        # Determine number of measurements per sample - need to include fact
+        # that vector snapshots have more samples
+        vector_components = [key + '/' + ax
+                             for ax, key in product(self.axis_labels,
+                                                    self.snapshot_keys)
+                             if key in self.vectors]
+        scalar_components = [key for key in self.snapshot_keys
+                             if key not in self.vectors]
+        all_components = tuple(vector_components + scalar_components)
+        n_components = len(all_components)
+
+        # Determine snapshot size
+        if self.thin_by:
+            snapshot_size = (n_components * self.n_samples,
+                             thinned_length(self.n_snapshots, self.thin_by))
+        else:
+            snapshot_size = (n_components * self.n_samples, self.n_snapshots)
+
+        # Generate group for snapshots
         snapshot_grp = self._file.require_group('snapshots')
         self._snapshots = snapshot_grp.require_dataset(
             name=dset_name, shape=snapshot_size,
             dtype=float, compression="gzip")
+        self._snapshots.attrs['keys'] = all_components
 
         # Copy over dataset data
-        
+        for idx, key in enumerate(all_components):
+            if self.thin_by:
+                self._snapshots[idx::n_components] = \
+                    self[key][:, ::self.thin_by]
+            else:
+                self._snapshots[idx::n_components] = self[key]
