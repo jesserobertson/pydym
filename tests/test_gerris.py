@@ -46,6 +46,12 @@ class GerrisTest(unittest.TestCase):
         for key in data.keys():
             self.assertTrue(key in self.expected_data.keys())
             self.assertIsNotNone(data[key])
+        self.assertTrue(os.path.exists(data.filename))
+
+        # Clean up
+        data.close()
+        os.remove(data.filename)
+        self.assertFalse(os.path.exists(data.filename))
 
     def test_make_vertex_file(self):
         """ Test that we can make a vertex file OK
