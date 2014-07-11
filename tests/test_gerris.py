@@ -29,7 +29,7 @@ class GerrisTest(unittest.TestCase):
             os.path.join(TEST_DATA_DIR, 'test_data.hdf5'))
         self.reader = pydym.io.gerris.GerrisReader(
             directory=GERRIS_DATA_DIR,
-            vertex_file=os.path.join(GERRIS_DATA_DIR, 'vertices.csv'))
+            vertex_file=os.path.join(TEST_DATA_DIR, 'vertices.csv'))
 
     def test_reader(self):
         """ Reader should initialize OK
