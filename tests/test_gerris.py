@@ -51,7 +51,7 @@ class GerrisTest(unittest.TestCase):
         """ Test that we can make a vertex file OK
         """
         expected_vertices = numpy.loadtxt(
-            os.path.join(GERRIS_DATA_DIR, 'vertices.csv'),
+            os.path.join(TEST_DATA_DIR, 'vertices.csv'),
             delimiter=' ')
 
         # Make vertices from base file
