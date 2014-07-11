@@ -47,11 +47,10 @@ class FlowDataTest(unittest.TestCase):
         """ Check that we can change snapshots back and forth
         """
         old_snapshot = self.data.snapshots
-        print '\n', self.data['snapshots'].keys()
-        self.data.set_snapshot_properties(snapshot_keys=['pressure', 'velocity'])
+        self.data.set_snapshot_properties(
+            snapshot_keys=['pressure', 'velocity'])
         self.assertIsNotNone(self.data.snapshots)
         self.assertIsNotNone(self.data['snapshots/pressure_velocity'])
-        print '\n', self.data['snapshots'].keys()
         self.data.set_snapshot_properties(snapshot_keys=['velocity'])
         self.assertIsNotNone(self.data.snapshots)
         self.assertIsNotNone(self.data['snapshots/velocity'])
