@@ -62,6 +62,9 @@ class FlowDataTest(unittest.TestCase):
         """
         for idx in xrange(self.data.n_snapshots):
             self.assertIsNotNone(self.data[idx])
+            datum = self.data[idx]
+            for attr in ('velocity', 'position', 'pressure', 'tracer'):
+                self.assertIsNotNone(getattr(datum, attr))
 
     def tearDown(self):
         # Close references to HDF5 file

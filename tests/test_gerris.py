@@ -42,16 +42,19 @@ class GerrisTest(unittest.TestCase):
     def test_process_directory(self):
         """ Processing a directory of Gerris simulations should work
         """
-        data = self.reader.process_directory(GERRIS_DATA_DIR)
-        for key in data.keys():
-            self.assertTrue(key in self.expected_data.keys())
-            self.assertIsNotNone(data[key])
-        self.assertTrue(os.path.exists(data.filename))
+        try:
+            data = self.reader.process_directory(GERRIS_DATA_DIR, update=True)
+            for key in data.keys():
+                self.assertTrue(key in self.expected_data.keys())
+                self.assertIsNotNone(data[key])
+            self.assertTrue(os.path.exists(data.filename))
+            data.close()
 
-        # Clean up
-        data.close()
-        os.remove(data.filename)
-        self.assertFalse(os.path.exists(data.filename))
+        finally:
+            filename = os.path.join(GERRIS_DATA_DIR, GERRIS_DATA_DIR + '.hdf5')
+            if os.path.exists(filename):
+                os.remove(filename)
+            self.assertFalse(os.path.exists(filename))
 
     def test_make_vertex_file(self):
         """ Test that we can make a vertex file OK
