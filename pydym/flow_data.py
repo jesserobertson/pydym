@@ -95,6 +95,7 @@ class FlowData(object):
         self._file = h5py.File(self.filename, 'w')
 
         # Map out vector datasets
+        ## To do: position not needed for every snapshot - just store once?
         for dset_name in self.vectors:
             grp = self._file.create_group(dset_name)
             for dim_idx in range(self.n_dimensions):
@@ -181,6 +182,14 @@ class FlowData(object):
             self.generate_snapshots()
         return self._snapshots
 
+    @property
+    def modes(self):
+        """ Returns the mode array for the data
+        """
+        if not self._modes:
+            self.generate_modes()
+        return self._modes
+
     def get_spatial_mode(self):
         """ Return the dynamic modes from the given snapshots.
 
@@ -188,7 +197,7 @@ class FlowData(object):
         """
         pass
 
-    def calculate_decomp(self):
+    def generate_modes(self):
         """ Calculate the dynamic modes from the current shapshot
         """
         S, U, sigma, Vstar = dynamic_decomposition(self, return_svd=True)
@@ -206,6 +215,10 @@ class FlowData(object):
                 shape=values.shape,
                 dtype=values.dtype)
             dset[...] = values
+        xxs = data['position/x'][:, mode_idx]
+yys = data['position/y'][:, mode_idx]
+us = U[0::2, mode_idx]
+vs = U[1::2, mode_idx]
 
     def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
         """ Set the properties used to generate snapshots
