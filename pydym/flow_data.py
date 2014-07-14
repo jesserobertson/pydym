@@ -16,6 +16,8 @@ import matplotlib.mlab as mlab
 from .dynamic_decomposition import dynamic_decomposition
 from .utilities import thinned_length, herm_transpose
 
+AXIS_LABELS = dict(zip(('x', 'y', 'z'), range(3)))
+
 
 class FlowDatum(dict):
 
@@ -32,13 +34,13 @@ class FlowDatum(dict):
     def __len__(self):
         return self.length
 
-    def interpolate(self, attribute, axis_index=None):
+    def interpolate(self, attribute, axis=None):
         """ Return the given attribute interpolated over a regular grid
         """
         # Get the values for the given attribute
         values = getattr(self, attribute)
-        if axis_index is not None:
-            values = values[axis_index]
+        if axis is not None:
+            values = values[AXIS_LABELS[axis]]
 
         # Generate a position grid
         xval, yval = self.position[0], self.position[1]
@@ -57,8 +59,6 @@ class FlowData(object):
     """ A class to store velocity data from a collection of flow visualisations
     """
 
-    default_axis_labels = ('x', 'y', 'z')
-
     def __init__(self, filename, snapshot_keys=('velocity',),
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('velocity',), scalar_datasets=tuple(),
@@ -74,8 +74,8 @@ class FlowData(object):
         self.snapshot_keys = snapshot_keys
         self.thin_by = thin_by
         self.shape = (self.n_samples, self.n_snapshots)
-        self.axis_labels = \
-            [self.default_axis_labels[i] for i in range(self.n_dimensions)]
+        self.axis_labels = [AXIS_LABELS.keys()[i]
+                            for i in range(self.n_dimensions)]
         self._snapshots = None
 
         # Initialize file
