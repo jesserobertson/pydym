@@ -7,25 +7,17 @@
 """
 
 from __future__ import division
-import numpy
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
+
+from .utilities import interpolator
 
 
 def plot_flow_data(data, axes=None, n_quiver=3, n_contours=20):
     """ Plot some data output by Gerris
     """
-    xval, yval = data.position[:, 0], data.position[:, 1]
-    xlim = xval.min(), xval.max()
-    ylim = yval.min(), yval.max()
-    nx, ny = map(len, (xval, yval))
-    xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-    make_grid = lambda var: mlab.griddata(data.position[:, 0],
-                                          data.position[:, 1],
-                                          getattr(data, var),
-                                          xs, ys, interp='linear')
-    Ps = make_grid('pressure')
-    Ts = make_grid('tracer')
+    xs, ys, interp = interpolator(data)
+    Ps = interp('pressure')
+    Ts = interp('tracer')
 
     # Plot the results
     if axes is None:

@@ -34,4 +34,5 @@ def interpolator(data):
     ylim = yval.min(), yval.max()
     nx, ny = map(len, (xval, yval))
     xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-    return lambda var: mlab.griddata(xval, yval, xs, ys, interp='linear')
+    return xs, ys, \
+        lambda var: mlab.griddata(xval, yval, xs, ys, interp='linear')
