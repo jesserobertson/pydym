@@ -11,27 +11,45 @@ import numpy
 import h5py
 import os
 from itertools import product
+import matplotlib.mlab as mlab
 
 from .dynamic_decomposition import dynamic_decomposition
 from .utilities import thinned_length, herm_transpose
 
 
-class FlowDatum(object):
+class FlowDatum(dict):
 
     """ A class to store velocity data from a flow visualisation
     """
 
-    def __init__(self, xs, ys, us, vs, pressure, tracer):
-        super(FlowDatum, self).__init__()
+    def __init__(self, xs, ys, us, vs, *args, **kwargs):
+        super(FlowDatum, self).__init__(*args, **kwargs)
+        self.__dict__ = self
         self.position = numpy.vstack([xs, ys])
         self.velocity = numpy.vstack([us, vs])
-        self.pressure = pressure
-        self.tracer = tracer
-
-        self._length = len(us)
+        self.length = len(us)
 
     def __len__(self):
-        return self._length
+        return self.length
+
+    def interpolate(self, attribute, axis_index=None):
+        """ Return the given attribute interpolated over a regular grid
+        """
+        # Get the values for the given attribute
+        values = getattr(self, attribute)
+        if axis_index is not None:
+            values = values[axis_index]
+
+        # Generate a position grid
+        xval, yval = self.position[0], self.position[1]
+        xlim = xval.min(), xval.max()
+        ylim = yval.min(), yval.max()
+        nx, ny = map(len, (xval, yval))
+
+        # Generate and return interpolation
+        xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
+        zs = mlab.griddata(xval, yval, values, xs, ys, interp='linear')
+        return xs, ys, zs
 
 
 class FlowData(object):
@@ -43,13 +61,13 @@ class FlowData(object):
 
     def __init__(self, filename, snapshot_keys=('velocity',),
                  n_snapshots=None, n_samples=None, n_dimensions=2,
-                 vector_datasets=('position', 'velocity'),
-                 scalar_datasets=('pressure', 'tracer'),
-                 update=False, thin_by=None):
+                 vector_datasets=('velocity',), scalar_datasets=tuple(),
+                 update=False, thin_by=None, run_checks=True):
         super(FlowData, self).__init__()
         self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
         self.filename = filename
+        self.run_checks = run_checks
         self.vectors, self.scalars = vector_datasets, scalar_datasets
 
         # Set up snapshot datasets
@@ -76,7 +94,8 @@ class FlowData(object):
         self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
         self.vectors = [n for n, v in self._file.items()
-                        if type(v) is h5py.Group]
+                        if type(v) is h5py.Group
+                        and n != 'snapshots']
         self.scalars = [n for n, v in self._file.items()
                         if type(v) is h5py.Dataset]
 
@@ -94,12 +113,21 @@ class FlowData(object):
             os.remove(self.filename)
         self._file = h5py.File(self.filename, 'w')
 
-        # Map out vector datasets
+        # Generate positions
+        grp = self._file.create_group('position')
+        for axis_label in self.axis_labels:
+            grp.require_dataset(name=axis_label,
+                                shape=(self.n_samples,),
+                                dtype=float,
+                                compression="gzip")
+        self._positions_filled = False
+
+        # Map out other vector datasets
         ## To do: position not needed for every snapshot - just store once?
         for dset_name in self.vectors:
             grp = self._file.create_group(dset_name)
-            for dim_idx in range(self.n_dimensions):
-                grp.require_dataset(name=self.axis_labels[dim_idx],
+            for axis_label in self.axis_labels:
+                grp.require_dataset(name=axis_label,
                                     shape=self.shape,
                                     dtype=float,
                                     compression="gzip")
@@ -123,11 +151,27 @@ class FlowData(object):
             idx = value_or_key
 
             # Reconstruct FlowDatum
-            return FlowDatum(
-                xs=self['position/x'][idx], ys=self['position/y'][idx],
-                us=self['velocity/x'][idx], vs=self['velocity/y'][idx],
-                pressure=self['pressure'][idx],
-                tracer=self['tracer'][idx])
+            datum = FlowDatum(
+                xs=self['position/x'][:, idx], ys=self['position/y'][:, idx],
+                us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
+
+            # Add other scalar and vector fields
+            remaining_vectors = set(self.vectors) \
+                - set(('velocity', 'position'))
+            for vector in remaining_vectors:
+                vec_data = numpy.empty(
+                    shape=(self.n_dimensions,
+                           self.n_samples,
+                           self.n_snapshots))
+                for dim_idx in range(self.n_dimensions):
+                    key = vector + '/' + self.axis_labels[dim_idx]
+                    vec_data[dim_idx] = self[key][:, idx]
+                setattr(datum, vector, vec_data)
+
+            for scalar in self.scalars:
+                setattr(datum, scalar, numpy.asarray(self[scalar][:, idx]))
+            return datum
+
         else:
             # We have a key
             return self._file[value_or_key]
@@ -138,6 +182,21 @@ class FlowData(object):
         if type(flow_datum) is not FlowDatum:
             raise ValueError("Trying to append non-FlowDatum object to "
                              "FlowData collection")
+
+        # If we have no positions yet, get them. Otherwise check that the
+        # position data matches
+        if not self._positions_filled:
+            values = flow_datum.position
+            for aidx, axis in enumerate(self.axis_labels):
+                self._file['position/' + axis][:] = values[aidx]
+            self._positions_filled = True
+        elif self.run_checks:
+            values = flow_datum.position
+            for aidx, axis in enumerate(self.axis_labels):
+                if not numpy.allclose(self._file['position/' + axis],
+                                      values[aidx]):
+                    raise ValueError('Flow datum supplied to FlowData '
+                                     'does not have the same position data')
 
         # Append vector data in the right places
         for dset in self.vectors:
@@ -215,10 +274,6 @@ class FlowData(object):
                 shape=values.shape,
                 dtype=values.dtype)
             dset[...] = values
-        xxs = data['position/x'][:, mode_idx]
-yys = data['position/y'][:, mode_idx]
-us = U[0::2, mode_idx]
-vs = U[1::2, mode_idx]
 
     def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
         """ Set the properties used to generate snapshots

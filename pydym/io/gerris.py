@@ -182,7 +182,7 @@ class GerrisReader(object):
             os.chdir(directory)
             # If the data already exists, then just load it
             if os.path.exists(output_name) and not update:
-                data = FlowData(filename=output_name)
+                data = FlowData(filename=output_name, run_checks=False)
 
             else:
                 data = None
