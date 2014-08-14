@@ -22,7 +22,7 @@ setup(
     install_requires=[
         'h5py>=2.0.0',
         'matplotlib>=1.0.0',
-        'numpy>=1.8.0',
+        'numpy>=1.6.0',
         'scipy>=0.10.0',
     ],
     test_suite='tests',

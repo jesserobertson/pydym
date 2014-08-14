@@ -223,7 +223,8 @@ class GerrisReader(object):
                         data = FlowData(filename=output_name,
                                         n_snapshots=len(gfsfiles),
                                         n_samples=len(datum),
-                                        update=True)
+                                        update=True,
+                                        scalar_datasets=('pressure', 'tracer'))
                         data[0] = datum
 
                     else:

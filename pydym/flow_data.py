@@ -24,12 +24,14 @@ class FlowDatum(dict):
     """ A class to store velocity data from a flow visualisation
     """
 
-    def __init__(self, xs, ys, us, vs, *args, **kwargs):
-        super(FlowDatum, self).__init__(*args, **kwargs)
+    def __init__(self, xs, ys, us, vs, **kwargs):
+        super(FlowDatum, self).__init__()
         self.__dict__ = self
         self.position = numpy.vstack([xs, ys])
         self.velocity = numpy.vstack([us, vs])
         self.length = len(us)
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def __len__(self):
         return self.length
@@ -89,7 +91,7 @@ class FlowData(object):
         """ Initialize the FlowData object from an HDF5 resource
         """
         self._file = h5py.File(self.filename, 'a')
-        self.shape = self['position/x'].shape
+        self.shape = self['velocity/x'].shape
         self.n_samples, self.n_snapshots = self.shape
         self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
@@ -152,7 +154,7 @@ class FlowData(object):
 
             # Reconstruct FlowDatum
             datum = FlowDatum(
-                xs=self['position/x'][:, idx], ys=self['position/y'][:, idx],
+                xs=self['position/x'], ys=self['position/y'],
                 us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
 
             # Add other scalar and vector fields
@@ -168,7 +170,9 @@ class FlowData(object):
                     vec_data[dim_idx] = self[key][:, idx]
                 setattr(datum, vector, vec_data)
 
+            print self.scalars
             for scalar in self.scalars:
+                print scalar
                 setattr(datum, scalar, numpy.asarray(self[scalar][:, idx]))
             return datum
 
@@ -217,6 +221,10 @@ class FlowData(object):
         """ Close the underlying HDF5 file
         """
         self._file.close()
+
+    def __del__(self):
+        self.close()
+        super(FlowData, self).__del__()
 
     def keys(self):
         """ Return an iterator over the available keys
