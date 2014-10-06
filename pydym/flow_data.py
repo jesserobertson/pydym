@@ -12,11 +12,12 @@ import h5py
 import os
 from itertools import product
 import matplotlib.mlab as mlab
+from collections import OrderedDict
 
 from .dynamic_decomposition import dynamic_decomposition
 from .utilities import thinned_length, herm_transpose
 
-AXIS_LABELS = dict(zip(('x', 'y', 'z'), range(3)))
+AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
 
 
 class FlowDatum(dict):
@@ -30,6 +31,8 @@ class FlowDatum(dict):
         self.position = numpy.vstack([xs, ys])
         self.velocity = numpy.vstack([us, vs])
         self.length = len(us)
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     def __len__(self):
         return self.length
@@ -88,8 +91,8 @@ class FlowData(object):
     def _init_from_file(self):
         """ Initialize the FlowData object from an HDF5 resource
         """
-        self._file = h5py.File(self.filename, 'a')
-        self.shape = self['position/x'].shape
+        self._file = h5py.File(self.filename)
+        self.shape = self['position'].attrs['shape']
         self.n_samples, self.n_snapshots = self.shape
         self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
@@ -115,6 +118,7 @@ class FlowData(object):
 
         # Generate positions
         grp = self._file.create_group('position')
+        grp.attrs['shape'] = self.shape
         for axis_label in self.axis_labels:
             grp.require_dataset(name=axis_label,
                                 shape=(self.n_samples,),
@@ -123,7 +127,6 @@ class FlowData(object):
         self._positions_filled = False
 
         # Map out other vector datasets
-        ## To do: position not needed for every snapshot - just store once?
         for dset_name in self.vectors:
             grp = self._file.create_group(dset_name)
             for axis_label in self.axis_labels:
@@ -152,7 +155,7 @@ class FlowData(object):
 
             # Reconstruct FlowDatum
             datum = FlowDatum(
-                xs=self['position/x'][:, idx], ys=self['position/y'][:, idx],
+                xs=self['position/x'], ys=self['position/y'],
                 us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
 
             # Add other scalar and vector fields
@@ -175,6 +178,12 @@ class FlowData(object):
         else:
             # We have a key
             return self._file[value_or_key]
+
+    def __iter__(self):
+        """ Iterate over the data snapshots
+        """
+        for idx in xrange(self.n_snapshots):
+            yield self[idx]
 
     def __setitem__(self, idx, flow_datum):
         """ Set the snapshot data at the given index
@@ -212,6 +221,16 @@ class FlowData(object):
                 self._file[dset][:, idx] = values
 
         self._recalc_snapshots = True
+
+    def __enter__(self):
+        """ On with block entry, just initialize self
+        """
+        return self
+
+    def __exit__(self, type, value, traceback):
+        """ Clean up HDF5 references on with block exit
+        """
+        self.close()
 
     def close(self):
         """ Close the underlying HDF5 file
