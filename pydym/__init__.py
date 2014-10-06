@@ -7,10 +7,10 @@
 """
 
 from dynamic_decomposition import dynamic_decomposition
-from flow_data import FlowData, FlowDatum
+from flow_data import FlowData, FlowDatum, load
 from modes import Modes, get_modes
 import io
 import plotting
 
-__all__ = [io, plotting, dynamic_decomposition, get_modes,
+__all__ = [io, plotting, dynamic_decomposition, get_modes, load,
            FlowData, FlowDatum, Modes]

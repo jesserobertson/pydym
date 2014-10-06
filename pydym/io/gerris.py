@@ -140,7 +140,7 @@ class GerrisReader(object):
             self.templates['output_file_template'].replace('\\', '')
         self.vertex_file = os.path.abspath(vertex_file)
 
-    def process_directory(self, directory, output_name=None,
+    def process_directory(self, directory=None, output_name=None,
                           update=False, clean=False, show_progress=True):
         """ Process the Gerris output files to get values at given points
 
@@ -162,6 +162,8 @@ class GerrisReader(object):
             :type show_progress: bool
         """
         # Get output name
+        if directory is None:
+            directory = os.path.abspath(os.getcwd())
         if output_name is None:
             output_name = os.path.join(os.path.abspath(directory),
                                        os.path.basename(directory) + '.hdf5')
@@ -240,6 +242,8 @@ class GerrisReader(object):
             print err
 
         finally:
-            os.chdir(current_dir)
+            # Close handle to hdf5 file if it exists
+            if data:
+                data.close()
 
-        return data
+            os.chdir(current_dir)
