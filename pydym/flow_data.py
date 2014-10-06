@@ -339,3 +339,17 @@ class FlowData(object):
                     self[key][:, ::self.thin_by]
             else:
                 self._snapshots[idx::n_components] = self[key]
+
+
+def load(datafile):
+    """ Load the given filename into a FlowData instance.
+
+        This is essentially a utility wrapper for use with 'with' statements
+        so you can do the following:
+
+            with pydym.load('somefile.hdf5') as data:
+                # do something with data
+
+        and have pydym clean up the HDF5 references for you nicely.
+    """
+    return FlowData(datafile)
