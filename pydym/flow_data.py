@@ -171,10 +171,9 @@ class FlowData(object):
                     vec_data[dim_idx] = self[key][:, idx]
                 setattr(datum, vector, vec_data)
 
-            print self.scalars
             for scalar in self.scalars:
-                print scalar
                 setattr(datum, scalar, numpy.asarray(self[scalar][:, idx]))
+
             return datum
 
         else:
@@ -237,11 +236,14 @@ class FlowData(object):
     def close(self):
         """ Close the underlying HDF5 file
         """
-        self._file.close()
+        try:
+            self._file.close()
+        except ValueError:
+            # Gets raised when file already closed or doesn't exist
+            pass
 
     def __del__(self):
         self.close()
-        super(FlowData, self).__del__()
 
     def keys(self):
         """ Return an iterator over the available keys
