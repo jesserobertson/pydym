@@ -160,6 +160,7 @@ class GerrisReader(object):
             :param show_progress: If True, prints a progress bar. Optional,
                 defaults to True
             :type show_progress: bool
+            :returns: the name of the file containing the output data
         """
         # Get output name
         if directory is None:
@@ -238,12 +239,15 @@ class GerrisReader(object):
                     if show_progress:
                         pbar.animate(idx + 1)
 
-        except IOError, err:
-            print err
+            return output_name
 
         finally:
             # Close handle to hdf5 file if it exists
-            if data:
-                data.close()
+            try:
+                if data:
+                    data.close()
+            except UnboundLocalError:
+                # The data object doesn't exist, so don't worry
+                pass
 
             os.chdir(current_dir)
