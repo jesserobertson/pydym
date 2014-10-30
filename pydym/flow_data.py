@@ -56,11 +56,10 @@ class FlowData(object):
         """
         self._file = h5py.File(self.filename)
         self.shape = self['properties/shape']
-        self.n_samples = self['properties/n_samples']
-        self.n_dimensions = self['properties/n_dimensions']
-        self.n_snapshots = self['properties/n_snapshots']
-        self.snapshot_interval = self['properties/snapshot_interval']
-        self.n_dimensions = len(self['position'].keys())
+        self.n_samples = int(self['properties/n_samples'][()])
+        self.n_dimensions = int(self['properties/n_dimensions'][()])
+        self.n_snapshots = int(self['properties/n_snapshots'][()])
+        self.snapshot_interval = self['properties/snapshot_interval'][()]
         self.axis_labels = self['position'].keys()
         self.vectors = [n for n, v in self._file.items()
                         if type(v) is h5py.Group
