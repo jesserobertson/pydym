@@ -11,50 +11,10 @@ import numpy
 import h5py
 import os
 from itertools import product
-import matplotlib.mlab as mlab
-from collections import OrderedDict
 
 from .dynamic_decomposition import dynamic_decomposition
-from .utilities import thinned_length, herm_transpose
-
-AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
-
-
-class FlowDatum(dict):
-
-    """ A class to store velocity data from a flow visualisation
-    """
-
-    def __init__(self, xs, ys, us, vs, **kwargs):
-        super(FlowDatum, self).__init__()
-        self.__dict__ = self
-        self.position = numpy.vstack([xs, ys])
-        self.velocity = numpy.vstack([us, vs])
-        self.length = len(us)
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def __len__(self):
-        return self.length
-
-    def interpolate(self, attribute, axis=None):
-        """ Return the given attribute interpolated over a regular grid
-        """
-        # Get the values for the given attribute
-        values = getattr(self, attribute)
-        if axis is not None:
-            values = values[AXIS_LABELS[axis]]
-
-        # Generate a position grid
-        xval, yval = self.position[0], self.position[1]
-        xlim = xval.min(), xval.max()
-        ylim = yval.min(), yval.max()
-        nx, ny = map(len, (xval, yval))
-
-        # Generate and return interpolation
-        xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-        zs = mlab.griddata(xval, yval, values, xs, ys, interp='linear')
-        return xs, ys, zs
+from .utilities import thinned_length, herm_transpose, AXIS_LABELS
+from .datum import Datum, make_velocity_datum
 
 
 class FlowData(object):
@@ -65,10 +25,12 @@ class FlowData(object):
     def __init__(self, filename, snapshot_keys=('velocity',),
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('velocity',), scalar_datasets=tuple(),
-                 update=False, thin_by=None, run_checks=True):
+                 update=False, thin_by=None, run_checks=True,
+                 snapshot_interval=1):
         super(FlowData, self).__init__()
         self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
+        self.snapshot_interval = snapshot_interval
         self.filename = filename
         self.run_checks = run_checks
         self.vectors, self.scalars = vector_datasets, scalar_datasets
@@ -80,6 +42,7 @@ class FlowData(object):
         self.axis_labels = [AXIS_LABELS.keys()[i]
                             for i in range(self.n_dimensions)]
         self._snapshots = None
+        self._modes = None
 
         # Initialize file
         self._file = None
@@ -92,8 +55,11 @@ class FlowData(object):
         """ Initialize the FlowData object from an HDF5 resource
         """
         self._file = h5py.File(self.filename)
-        self.shape = self['position'].attrs['shape']
-        self.n_samples, self.n_snapshots = self.shape
+        self.shape = self['properties/shape']
+        self.n_samples = self['properties/n_samples']
+        self.n_dimensions = self['properties/n_dimensions']
+        self.n_snapshots = self['properties/n_snapshots']
+        self.snapshot_interval = self['properties/snapshot_interval']
         self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
         self.vectors = [n for n, v in self._file.items()
@@ -116,9 +82,16 @@ class FlowData(object):
             os.remove(self.filename)
         self._file = h5py.File(self.filename, 'w')
 
+        # Add properties
+        grp = self._file.create_group('properties')
+        grp['shape'] = self.shape
+        grp['n_samples'] = self.n_samples
+        grp['n_dimensions'] = self.n_dimensions
+        grp['n_snapshots'] = self.n_snapshots
+        grp['snapshot_interval'] = self.snapshot_interval
+
         # Generate positions
         grp = self._file.create_group('position')
-        grp.attrs['shape'] = self.shape
         for axis_label in self.axis_labels:
             grp.require_dataset(name=axis_label,
                                 shape=(self.n_samples,),
@@ -154,9 +127,11 @@ class FlowData(object):
             idx = value_or_key
 
             # Reconstruct FlowDatum
-            datum = FlowDatum(
-                xs=self['position/x'], ys=self['position/y'],
-                us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
+            datum = make_velocity_datum(
+                xs=self['position/x'],
+                ys=self['position/y'],
+                us=self['velocity/x'][:, idx],
+                vs=self['velocity/y'][:, idx])
 
             # Add other scalar and vector fields
             remaining_vectors = set(self.vectors) \
@@ -189,7 +164,7 @@ class FlowData(object):
     def __setitem__(self, idx, flow_datum):
         """ Set the snapshot data at the given index
         """
-        if type(flow_datum) is not FlowDatum:
+        if type(flow_datum) is not Datum:
             raise ValueError("Trying to append non-FlowDatum object to "
                              "FlowData collection")
 
@@ -264,7 +239,7 @@ class FlowData(object):
     def snapshots(self):
         """ Returns the snapshot array for the data
         """
-        if not self._snapshots:
+        if self._snapshots is None:
             self.generate_snapshots()
         return self._snapshots
 
@@ -272,16 +247,9 @@ class FlowData(object):
     def modes(self):
         """ Returns the mode array for the data
         """
-        if not self._modes:
+        if self._modes is None:
             self.generate_modes()
         return self._modes
-
-    def get_spatial_mode(self):
-        """ Return the dynamic modes from the given snapshots.
-
-            Uses the currently set snapshot_keys by default
-        """
-        pass
 
     def generate_modes(self):
         """ Calculate the dynamic modes from the current shapshot
@@ -301,6 +269,7 @@ class FlowData(object):
                 shape=values.shape,
                 dtype=values.dtype)
             dset[...] = values
+        self._modes = mode_grp
 
     def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
         """ Set the properties used to generate snapshots

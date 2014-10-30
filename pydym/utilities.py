@@ -7,6 +7,27 @@
 """
 
 import sys
+import numpy
+from matplotlib import mlab
+from collections import OrderedDict
+
+
+AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
+
+
+def interpolate(position, values, axis=None):
+    """ Return the given attribute interpolated over a regular grid
+    """
+    # Generate a position grid
+    xval, yval = position[0], position[1]
+    xlim = xval.min(), xval.max()
+    ylim = yval.min(), yval.max()
+    nx, ny = map(len, (xval, yval))
+
+    # Generate and return interpolation
+    xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
+    zs = mlab.griddata(xval, yval, values, xs, ys, interp='linear')
+    return xs, ys, zs
 
 
 def herm_transpose(array):

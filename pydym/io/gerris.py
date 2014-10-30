@@ -15,7 +15,8 @@ import os
 import subprocess
 
 from ..utilities import ProgressBar
-from ..flow_data import FlowDatum, FlowData
+from ..flow_data import FlowData
+from ..datum import make_velocity_datum
 
 
 def read_output_file(output_file):
@@ -29,9 +30,10 @@ def read_output_file(output_file):
 
         # Read in the rest of the file using pandas
         datum = pandas.read_table(fhandle, sep=' ', names=header)
-        datum = FlowDatum(xs=datum['x'], ys=datum['y'],
-                          us=datum['U'], vs=datum['V'],
-                          pressure=datum['P'], tracer=datum['T'])
+        datum = make_velocity_datum(
+            xs=datum['x'], ys=datum['y'],
+            us=datum['U'], vs=datum['V'],
+            pressure=datum['P'], tracer=datum['T'])
 
         return datum
 

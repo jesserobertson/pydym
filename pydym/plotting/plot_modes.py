@@ -6,7 +6,7 @@
     description: Plotting dynamic mode data
 """
 
-from .utilities import interpolator
+from ..utilities import interpolate
 
 import numpy
 import matplotlib.pyplot as plt
@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt
 def plot_modes(data, axes=None, n_quiver=3, n_contours=20):
     """ Plot the modes derived from a dynamic decomposition of the flow data.
     """
-    xs, ys, interp = interpolator(data)
     abs_velocity = numpy.sqrt(
         data.velocity[::n_quiver, 0] ** 2
         + data.velocity[::n_quiver, 1] ** 2)
+    xs, ys, interp = interpolate(data.position, abs_velocity)
 
     # Plot the results
     if axes is None:
