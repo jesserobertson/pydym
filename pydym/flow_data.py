@@ -63,7 +63,7 @@ class FlowData(object):
         self.axis_labels = self['position'].keys()
         self.vectors = [n for n, v in self._file.items()
                         if type(v) is h5py.Group
-                        and n != 'snapshots']
+                        and n not in ('snapshots', 'properties')]
         self.scalars = [n for n, v in self._file.items()
                         if type(v) is h5py.Dataset]
 
@@ -114,88 +114,22 @@ class FlowData(object):
                                        dtype=float,
                                        compression="gzip")
 
-    def __getitem__(self, value_or_key):
-        """ Get the data associated with a given index or key
-
-            If value_or_key is an integer index, return the FlowDatum object
-            associated with that snapshot. If value_or_key is a string, return
+    def __getitem__(self, key):
+        """ Get the data associated with a key, returns
             the h5py.Dataset object for that string.
         """
-        if type(value_or_key) is int:
-            # We have an index
-            idx = value_or_key
+        return self._file[key]
 
-            # Reconstruct FlowDatum
-            datum = make_velocity_datum(
-                xs=self['position/x'],
-                ys=self['position/y'],
-                us=self['velocity/x'][:, idx],
-                vs=self['velocity/y'][:, idx])
-
-            # Add other scalar and vector fields
-            remaining_vectors = set(self.vectors) \
-                - set(('velocity', 'position'))
-            for vector in remaining_vectors:
-                vec_data = numpy.empty(
-                    shape=(self.n_dimensions,
-                           self.n_samples,
-                           self.n_snapshots))
-                for dim_idx in range(self.n_dimensions):
-                    key = vector + '/' + self.axis_labels[dim_idx]
-                    vec_data[dim_idx] = self[key][:, idx]
-                setattr(datum, vector, vec_data)
-
-            for scalar in self.scalars:
-                setattr(datum, scalar, numpy.asarray(self[scalar][:, idx]))
-
-            return datum
-
-        else:
-            # We have a key
-            return self._file[value_or_key]
+    def __setitem__(self, key, value):
+        """ Set the data associated with a key
+        """
+        self._file[key] = value
 
     def __iter__(self):
         """ Iterate over the data snapshots
         """
         for idx in xrange(self.n_snapshots):
-            yield self[idx]
-
-    def __setitem__(self, idx, flow_datum):
-        """ Set the snapshot data at the given index
-        """
-        if type(flow_datum) is not Datum:
-            raise ValueError("Trying to append non-FlowDatum object to "
-                             "FlowData collection")
-
-        # If we have no positions yet, get them. Otherwise check that the
-        # position data matches
-        if not self._positions_filled:
-            values = flow_datum.position
-            for aidx, axis in enumerate(self.axis_labels):
-                self._file['position/' + axis][:] = values[aidx]
-            self._positions_filled = True
-        elif self.run_checks:
-            values = flow_datum.position
-            for aidx, axis in enumerate(self.axis_labels):
-                if not numpy.allclose(self._file['position/' + axis],
-                                      values[aidx]):
-                    raise ValueError('Flow datum supplied to FlowData '
-                                     'does not have the same position data')
-
-        # Append vector data in the right places
-        for dset in self.vectors:
-            values = getattr(flow_datum, dset)
-            if values is not None:
-                for aidx, axis in enumerate(self.axis_labels):
-                    self._file[dset + '/' + axis][:, idx] = values[aidx]
-
-        # Update scalar data
-        for dset in self.scalars:
-            values = getattr(flow_datum, dset)
-            if values is not None:
-                self._file[dset][:, idx] = values
-
-        self._recalc_snapshots = True
+            yield self.get_snapshot(idx)
 
     def __enter__(self):
         """ On with block entry, just initialize self
@@ -249,6 +183,77 @@ class FlowData(object):
         if self._modes is None:
             self.generate_modes()
         return self._modes
+
+    def get_snapshot(self, index):
+        """ Get the snapshot associated with the given index
+        """
+        # Reconstruct FlowDatum
+        datum = make_velocity_datum(
+            xs=self['position/x'],
+            ys=self['position/y'],
+            us=self['velocity/x'][:, index],
+            vs=self['velocity/y'][:, index])
+
+        # Add other scalar and vector fields
+        remaining_vectors = set(self.vectors) \
+            - set(('velocity', 'position'))
+        for vector in remaining_vectors:
+            vec_data = numpy.empty(
+                shape=(self.n_dimensions,
+                       self.n_samples,
+                       self.n_snapshots))
+            for dim_index in range(self.n_dimensions):
+                key = vector + '/' + self.axis_labels[dim_index]
+                vec_data[dim_index] = self[key][:, index]
+            setattr(datum, vector, vec_data)
+
+        for scalar in self.scalars:
+            setattr(datum, scalar, numpy.asarray(self[scalar][:, index]))
+
+        # Add properties
+        setattr(datum, 'properties', {})
+        properties_grp = self['properties']
+        for key in properties_grp.keys():
+            datum.properties[key] = properties_grp[key][()]
+
+        return datum
+
+    def set_snapshot(self, idx, flow_datum):
+        """ Set the snapshot data at the given index
+        """
+        if type(flow_datum) is not Datum:
+            raise ValueError("Trying to append non-FlowDatum object to "
+                             "FlowData collection")
+
+        # If we have no positions yet, get them. Otherwise check that the
+        # position data matches
+        if not self._positions_filled:
+            values = flow_datum.position
+            for aidx, axis in enumerate(self.axis_labels):
+                self._file['position/' + axis][:] = values[aidx]
+            self._positions_filled = True
+        elif self.run_checks:
+            values = flow_datum.position
+            for aidx, axis in enumerate(self.axis_labels):
+                if not numpy.allclose(self._file['position/' + axis],
+                                      values[aidx]):
+                    raise ValueError('Flow datum supplied to FlowData '
+                                     'does not have the same position data')
+
+        # Append vector data in the right places
+        for dset in self.vectors:
+            values = getattr(flow_datum, dset)
+            if values is not None:
+                for aidx, axis in enumerate(self.axis_labels):
+                    self._file[dset + '/' + axis][:, idx] = values[aidx]
+
+        # Update scalar data
+        for dset in self.scalars:
+            values = getattr(flow_datum, dset)
+            if values is not None:
+                self._file[dset][:, idx] = values
+
+        self._recalc_snapshots = True
 
     def generate_modes(self):
         """ Calculate the dynamic modes from the current shapshot
