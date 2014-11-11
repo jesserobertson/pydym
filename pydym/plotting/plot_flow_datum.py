@@ -20,17 +20,24 @@ def plot_flow_datum(data, axes=None, decimate_by=10):
     ylim = yval.min(), yval.max()
     nx, ny = map(len, (xval, yval))
     xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-    xs, ys, Ps = data.interpolate('pressure')
-    _, _, Ts = data.interpolate('tracer')
 
     # Plot the results
     if axes is None:
         axes = plt.gca()
     axes.set_aspect('equal')
-    axes.contour(xs, ys, Ts, [0.5],
-                 colors=['gray'], linewidths=[2], zorder=2, alpha=0.6)
-    axes.contourf(xs, ys, Ts, [-0.1, 0.5, 1.1],
-                  colors=['red', 'gold'], extend='both', alpha=0.6, zorder=1)
+    try:
+        _, _, Ts = data.interpolate('tracer')
+        axes.contour(xs, ys, Ts, [0.5],
+                     colors=['gray'], linewidths=[2], zorder=2, alpha=0.6)
+        axes.contourf(xs, ys, Ts, [-0.1, 0.5, 1.1],
+                      colors=['red', 'gold'], extend='both',
+                      alpha=0.6, zorder=1)
+    except AttributeError:
+        _, _, us = data.interpolate('velocity', 'x')
+        _, _, vs = data.interpolate('velocity', 'y')
+        axes.contourf(xs, ys, numpy.sqrt(us ** 2 + vs ** 2),
+                      cmap='Spectral', alpha=0.7, zorder=1)
+
     axes.quiver(xval[::decimate_by], yval[::decimate_by],
                 data.velocity[0][::decimate_by],
                 data.velocity[1][::decimate_by],
