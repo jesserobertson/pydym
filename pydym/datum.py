@@ -11,7 +11,7 @@ import numpy
 from .utilities import interpolate, AXIS_LABELS
 
 
-class Datum(dict):
+class Datum(object):
 
     """ A class to store spatially located data
     """
