@@ -143,7 +143,8 @@ class GerrisReader(object):
         self.vertex_file = os.path.abspath(vertex_file)
 
     def process_directory(self, directory=None, output_name=None,
-                          update=False, clean=False, show_progress=True):
+                          update=False, clean=False, show_progress=True,
+                          run_parameters=None):
         """ Process the Gerris output files to get values at given points
 
             :param directory: The directory to process
@@ -229,11 +230,14 @@ class GerrisReader(object):
                                         n_snapshots=len(gfsfiles),
                                         n_samples=len(datum),
                                         update=True,
-                                        scalar_datasets=('pressure', 'tracer'))
-                        data[0] = datum
+                                        scalar_datasets=('pressure', 'tracer'),
+                                        properties=run_parameters)
+                        data.set_snapshot(0, datum)
 
                     else:
-                        data[idx] = read_output_file(output_filename)
+                        data.set_snapshot(
+                            idx,
+                            read_output_file(output_filename))
 
                     # Clean up if required
                     if clean:

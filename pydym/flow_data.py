@@ -26,7 +26,7 @@ class FlowData(object):
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('velocity',), scalar_datasets=tuple(),
                  update=False, thin_by=None, run_checks=True,
-                 snapshot_interval=1):
+                 snapshot_interval=1, properties=None):
         super(FlowData, self).__init__()
         self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
@@ -34,6 +34,7 @@ class FlowData(object):
         self.filename = filename
         self.run_checks = run_checks
         self.vectors, self.scalars = vector_datasets, scalar_datasets
+        self.properties = properties
 
         # Set up snapshot datasets
         self.snapshot_keys = snapshot_keys
@@ -44,10 +45,13 @@ class FlowData(object):
         self._snapshots = None
         self._modes = None
 
-        # Initialize file
+        # Initialize HDF5 backend file
         self._file = None
         if os.path.exists(filename) and not update:
             self._init_from_file()
+        elif filename and self.n_samples is None:
+            # We obviously wanted a file but it can't be found
+            raise IOError("Can't find {0}".format(filename))
         else:
             self._init_from_arguments()
 
@@ -55,6 +59,7 @@ class FlowData(object):
         """ Initialize the FlowData object from an HDF5 resource
         """
         self._file = h5py.File(self.filename)
+        self.properties = self['properties']
         self.shape = self['properties/shape']
         self.n_samples = int(self['properties/n_samples'][()])
         self.n_dimensions = int(self['properties/n_dimensions'][()])
@@ -88,6 +93,9 @@ class FlowData(object):
         grp['n_dimensions'] = self.n_dimensions
         grp['n_snapshots'] = self.n_snapshots
         grp['snapshot_interval'] = self.snapshot_interval
+        if self.properties is not None:
+            for key, value in self.properties.items():
+                grp[key] = value
 
         # Generate positions
         grp = self._file.create_group('position')

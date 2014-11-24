@@ -8,7 +8,7 @@
 
 from __future__ import division
 
-import numpy
+# import numpy
 import matplotlib.pyplot as plt
 
 
@@ -16,12 +16,9 @@ def plot_flow_datum(data, axes=None, decimate_by=10):
     """ Plot a FlowDatum instance
     """
     xval, yval = data.position[0], data.position[1]
-    xlim = xval.min(), xval.max()
-    ylim = yval.min(), yval.max()
-    nx, ny = map(len, (xval, yval))
-    xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-    xs, ys, Ps = data.interpolate('pressure')
-    _, _, Ts = data.interpolate('tracer')
+    # xlim = xval.min(), xval.max()
+    # ylim = yval.min(), yval.max()
+    xs, ys, Ts = data.interpolate('tracer', decimate_by=decimate_by)
 
     # Plot the results
     if axes is None:

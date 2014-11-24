@@ -25,7 +25,7 @@ class Datum(object):
     def __len__(self):
         return len(self.position[0])
 
-    def interpolate(self, attribute, axis=None):
+    def interpolate(self, attribute, axis=None, decimate_by=None):
         """ Return the given attribute interpolated over a regular grid
         """
         # Get the values for the given attribute
@@ -33,7 +33,7 @@ class Datum(object):
         if axis is not None:
             values = values[AXIS_LABELS[axis]]
 
-        return interpolate(self.position, values)
+        return interpolate(self.position, values, decimate_by=decimate_by)
 
 
 def make_velocity_datum(xs, ys, us, vs, **kwargs):
