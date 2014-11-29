@@ -11,6 +11,8 @@ from flow_data import FlowData, load
 from datum import Datum
 import io
 import plotting
+import integrate
 
-__all__ = [io, plotting, dynamic_decomposition, load,
+__all__ = [io, plotting, integrate,
+           dynamic_decomposition, load,
            FlowData, Datum]
