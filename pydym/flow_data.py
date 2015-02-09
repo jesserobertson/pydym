@@ -152,12 +152,12 @@ class FlowData(object):
 
             # Reconstruct FlowDatum
             datum = FlowDatum(
-                xs=self['position/x'][:, idx], ys=self['position/y'][:, idx],
+                xs=self['position/x'][:], ys=self['position/y'][:],
                 us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
 
             # Add other scalar and vector fields
             remaining_vectors = set(self.vectors) \
-                - set(('velocity', 'position'))
+                - set(('velocity', 'position', 'modes'))
             for vector in remaining_vectors:
                 vec_data = numpy.empty(
                     shape=(self.n_dimensions,
@@ -174,7 +174,11 @@ class FlowData(object):
 
         else:
             # We have a key
-            return self._file[value_or_key]
+            try:
+                return self._file[value_or_key]
+            except KeyError:
+                raise KeyError("Can't find item {0}".format(value_or_key))
+
 
     def __setitem__(self, idx, flow_datum):
         """ Set the snapshot data at the given index
