@@ -157,7 +157,7 @@ class FlowData(object):
 
             # Add other scalar and vector fields
             remaining_vectors = set(self.vectors) \
-                - set(('velocity', 'position', 'modes'))
+                - set(('velocity', 'position', 'modes', 'properties'))
             for vector in remaining_vectors:
                 vec_data = numpy.empty(
                     shape=(self.n_dimensions,
