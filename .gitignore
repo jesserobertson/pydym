@@ -1,3 +1,4 @@
+pydym/_version.py
 build
 *.hdf*
 dist
