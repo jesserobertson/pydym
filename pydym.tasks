@@ -1,20 +1,20 @@
  pyDyM:
 
-   ☐ Streaming SVD for large problems
-   
-   New Modes data structure:
-   
-     ☐ Iteration
-     ☐ Backend - seperate files?
- 
+    [ ] Streaming SVD for large problems
+
+    New Modes data structure:
+
+        [ ] Iteration
+        [ ] Backend - seperate files?
+
  Science:
 
-   ☐ How do we identify modes across runs?
-     K-means? We should be able to match the closest mode across parameters
-     
-   ☐ Maps of modes vs parameters
-   ☐ Identifying hyperbolic transport modes from spatial structures
-   ☐ Identifying higher-order hyperbolic transport modes
+  [ ] How do we identify modes across runs?
+      K-means? We should be able to match the closest mode across parameters
+
+  [ ] Maps of modes vs parameters
+  [ ] Identifying hyperbolic transport modes from spatial structures
+  [ ] Identifying higher-order hyperbolic transport modes
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
