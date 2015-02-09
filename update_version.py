@@ -29,7 +29,7 @@ def update_version():
                     "pydym/_version.py alone.")
         return
     try:
-        p = subprocess.Popen(["git", "describe", "--always"],
+        p = subprocess.Popen(["git", "describe", "--always", "--tags"],
                              stdout=subprocess.PIPE)
         stdout = p.communicate()[0]
         if p.returncode != 0:
