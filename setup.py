@@ -17,13 +17,13 @@ with open('requirements.txt') as fhandle:
 # Get version number from _version.py
 # Can be updated using python setup.py update_version
 from update_version import update_version, Version, get_version
-update_version()
+# update_version()
 
 ## PACKAGE INFORMATION
 setup(
     # Metadata
     name='pydym',
-    version='0.0.1',
+    version='0.0.2',
     description='Dynamic mode decompositions of data in Python',
     author='Jess Robertson',
     author_email='jesse.robertson@csiro.au',
