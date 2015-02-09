@@ -1,0 +1,27 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"name": "Project files",
+			"folder_exclude_patterns": ["pydym", "logs", "tests", "build", "dist", "*.egg-info"],
+			"file_exclude_patterns": ["*.sublime-workspace"]
+		},
+		{
+			"path": "pydym",
+			"name": "Source",
+			"folder_exclude_patterns": [],
+			"file_exclude_patterns": ["*.pyc"]
+		},
+		{
+			"path": "tests",
+			"name": "Tests",
+			"folder_exclude_patterns": [],
+			"file_exclude_patterns": ["*.pyc"]
+		}
+	],
+	"settings":
+	{
+		"tab_size": 4
+	}
+}

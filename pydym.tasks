@@ -1,0 +1,23 @@
+ pyDyM:
+
+    [ ] Streaming SVD for large problems
+
+    New Modes data structure:
+
+        [ ] Iteration
+        [ ] Backend - seperate files?
+
+ Science:
+
+  [ ] How do we identify modes across runs?
+      K-means? We should be able to match the closest mode across parameters
+
+  [ ] Maps of modes vs parameters
+  [ ] Identifying hyperbolic transport modes from spatial structures
+  [ ] Identifying higher-order hyperbolic transport modes
+
+＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
+Archive:
+ ✔ Change velocities to real values @done (14-07-14 09:06) @project(pyDyM)
+ ✔ Set up ipython notebook to use pydym data structures @done (14-07-08 09:15) @project(pyDyM)
+ ✔ HDF5 backend for data @done (14-07-14 09:06) @project(pyDyM)
