@@ -89,7 +89,7 @@ class FlowData(object):
         """ Initialize the FlowData object from an HDF5 resource
         """
         self._file = h5py.File(self.filename, 'a')
-        self.shape = self['position/x'].shape
+        self.shape = self['properties']['shape'][()]
         self.n_samples, self.n_snapshots = self.shape
         self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
