@@ -78,3 +78,6 @@ class GerrisTest(unittest.TestCase):
         subset = boxes[mask]
         subset[..., 2] = 0  # Store a z value of 0
         self.assertTrue(numpy.allclose(subset, expected_vertices))
+
+if __name__ == '__main__':
+    unittest.main()
