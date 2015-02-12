@@ -8,6 +8,7 @@
 
 from __future__ import division
 import matplotlib.pyplot as plt
+import numpy
 
 
 def plot_flow_data(datum, axes=None, n_quiver=3, n_contours=20):
@@ -17,14 +18,23 @@ def plot_flow_data(datum, axes=None, n_quiver=3, n_contours=20):
         plt.figure(figsize=(11, 11))
         axes = plt.gca()
     axes.set_aspect('equal')
-    xs, ys, ts = datum.interpolate('tracer')
-    axes.contour(xs, ys, ts, [0.5],
-                 colors=['black'], linewidths=[2],
-                 alpha=0.5)
-    axes.contourf(xs, ys, ts, [0.5, 1],
-                  colors=['black'], alpha=0.1,
-                  zorder=1)
-    xs, ys, ps = datum.interpolate('pressure')
+
+    # Try to get tracer field
+    try:
+        xs, ys, ts = datum.interpolate('tracer')
+        axes.contour(xs, ys, ts, [0.5],
+                     colors=['black'], linewidths=[2],
+                     alpha=0.5)
+        axes.contourf(xs, ys, ts, [0.5, 1],
+                      colors=['black'], alpha=0.1,
+                      zorder=1)
+    except AttributeError:
+        pass
+
+    # Try for pressure field, fall back to
+    datum['abs_velocity'] = \
+      numpy.sqrt(datum.velocity[0] ** 2 + datum.velocity[1] ** 2)
+    xs, ys, ps = datum.interpolate('abs_velocity')
     axes.contourf(xs, ys, ps, n_contours,
                   cmap=plt.get_cmap('RdYlBu'),
                   alpha=0.6,

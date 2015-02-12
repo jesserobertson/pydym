@@ -8,7 +8,7 @@
 
 from __future__ import division
 import numpy
-from numpy.linalg import svd
+from scipy import linalg
 
 from .utilities import foldr, herm_transpose
 
@@ -31,14 +31,15 @@ def dynamic_decomposition(flow_data, return_svd=False):
     current = flow_data.snapshots[:, 1:]
 
     # Calculate SVD of past data array
-    U, sigma, Vstar = svd(past, full_matrices=False)
+    U, sigma, Vstar = linalg.svd(past, full_matrices=False)
+    V = Vstar.transpose()
 
-    # Calculate apprioximate dynamic array given current data
-    S = foldr(numpy.dot, (herm_transpose(U), current, herm_transpose(Vstar),
+    # Calculate approximate dynamic array given current data
+    S = foldr(numpy.dot, (U.transpose(), current, V,
                           numpy.diag(1 / sigma)))
 
     # Send back results
     if return_svd:
-        return S, U, sigma, Vstar
+        return S, U, sigma, V
     else:
         return S

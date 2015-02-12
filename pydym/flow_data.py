@@ -12,11 +12,12 @@ import h5py
 import os
 from itertools import product
 import matplotlib.mlab as mlab
+from collections import OrderedDict
 
 from .dynamic_decomposition import dynamic_decomposition
 from .utilities import thinned_length, herm_transpose
 
-AXIS_LABELS = dict(zip(('x', 'y', 'z'), range(3)))
+AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
 
 
 class FlowDatum(dict):
@@ -24,15 +25,21 @@ class FlowDatum(dict):
     """ A class to store velocity data from a flow visualisation
     """
 
-    def __init__(self, xs, ys, us, vs, *args, **kwargs):
-        super(FlowDatum, self).__init__(*args, **kwargs)
+    def __init__(self, xs, ys, us, vs, **kwargs):
+        super(FlowDatum, self).__init__()
         self.__dict__ = self
         self.position = numpy.vstack([xs, ys])
         self.velocity = numpy.vstack([us, vs])
         self.length = len(us)
 
+        for key, value in kwargs.items():
+            self[key] = value
+
     def __len__(self):
         return self.length
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
 
     def interpolate(self, attribute, axis=None):
         """ Return the given attribute interpolated over a regular grid

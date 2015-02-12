@@ -8,5 +8,6 @@
 
 from eigenplots import eigenplot, logeigenplot
 from plot_flow_data import plot_flow_data
+# from plot_modes import plot_modes
 
-__all__ = [eigenplot, logeigenplot, plot_flow_data]
+__all__ = ['eigenplot', 'logeigenplot', 'plot_flow_data']
