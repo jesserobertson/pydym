@@ -14,10 +14,9 @@ import numpy
 import pydym
 
 # location of test data files
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "resources")
-GERRIS_DATA_DIR = os.path.join(os.path.dirname(__file__),
-                               "resources", "gerris_simulations")
-
+LOCAL = os.path.abspath(os.path.dirname(__file__))
+TEST_DATA_DIR = os.path.join(LOCAL, "resources")
+GERRIS_DATA_DIR = os.path.join(TEST_DATA_DIR, "gerris_simulations")
 
 class GerrisTest(unittest.TestCase):
 
@@ -25,10 +24,7 @@ class GerrisTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.expected_data = pydym.FlowData(
-            os.path.join(TEST_DATA_DIR, 'test_data.hdf5'))
         self.reader = pydym.io.gerris.GerrisReader(
-            directory=GERRIS_DATA_DIR,
             vertex_file=os.path.join(TEST_DATA_DIR, 'vertices.csv'))
 
     def test_reader(self):
@@ -42,6 +38,13 @@ class GerrisTest(unittest.TestCase):
     def test_process_directory(self):
         """ Processing a directory of Gerris simulations should work
         """
+        # Load up expected data
+        dfile = os.path.join(TEST_DATA_DIR,
+                             '{0}.hdf5'.format(os.path.basename(
+                                                GERRIS_DATA_DIR)))
+        expected_data = pydym.FlowData(dfile)
+        import pdb; pdb.set_trace()
+
         try:
             data = self.reader.process_directory(GERRIS_DATA_DIR, update=True)
             for key in data.keys():

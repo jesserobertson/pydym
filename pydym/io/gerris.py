@@ -163,8 +163,10 @@ class GerrisReader(object):
         """
         # Get output name
         if output_name is None:
-            output_name = os.path.join(os.path.abspath(directory),
-                                       os.path.basename(directory) + '.hdf5')
+            root = os.path.abspath(directory)
+            name = os.path.basename(root)
+            output_name = os.path.join(root, name + '.hdf5')
+            print 'Saving to file {0}'.format(output_name)
 
         # Set Gerris command string
         self.command_template = (
@@ -182,6 +184,7 @@ class GerrisReader(object):
             os.chdir(directory)
             # If the data already exists, then just load it
             if os.path.exists(output_name) and not update:
+                print 'Found existing file, loading'
                 data = FlowData(filename=output_name, run_checks=False)
 
             else:
@@ -234,6 +237,8 @@ class GerrisReader(object):
                         os.remove(output_filename)
                     if show_progress:
                         pbar.animate(idx + 1)
+
+                print 'File saved to {0}'.format(output_name)
 
         except IOError, err:
             print err

@@ -146,6 +146,10 @@ class FlowData(object):
                                        dtype=float,
                                        compression="gzip")
 
+        # Add properties
+        grp = self._file.create_group('properties')
+
+
     def __getitem__(self, value_or_key):
         """ Get the data associated with a given index or key
 
