@@ -69,7 +69,7 @@ def dynamic_decomposition(data, burn=100):
         'eigenvalues': eigvals,
         'eigenvectors': eigvecs,
         'amplitudes': amplitudes,
-        'modes': (dot(U, Y) * alpha).real,
+        'modes': (dot(U, eigvecs) * amplitudes).real,
         'intermediate_values': {
             'svd': (U, sigma, V),
             'weights': (P, q, s)
