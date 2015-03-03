@@ -23,5 +23,23 @@
 	"settings":
 	{
 		"tab_size": 4
-	}
+	},
+	"build_systems":
+	[
+		{
+			"name": "Production build",
+			"cmd": ["python", "setup.py", "build"],
+			"working_dir": "$project_path"
+		},
+		{
+			"name": "Install",
+			"cmd": ["python", "setup.py", "install", "--user"],
+			"working_dir": "$project_path"
+		},
+		{
+			"name": "Run test suite",
+			"cmd": ["python", "setup.py", "test"],
+			"working_dir": "$project_path"
+		}
+	]
 }

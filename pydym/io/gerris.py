@@ -15,7 +15,8 @@ import os
 import subprocess
 
 from ..utilities import ProgressBar
-from ..flow_data import FlowDatum, FlowData
+from ..flow_data import FlowData
+from ..datum import make_velocity_datum
 
 
 def read_output_file(output_file):
@@ -29,9 +30,10 @@ def read_output_file(output_file):
 
         # Read in the rest of the file using pandas
         datum = pandas.read_table(fhandle, sep=' ', names=header)
-        datum = FlowDatum(xs=datum['x'], ys=datum['y'],
-                          us=datum['U'], vs=datum['V'],
-                          pressure=datum['P'], tracer=datum['T'])
+        datum = make_velocity_datum(
+            xs=datum['x'], ys=datum['y'],
+            us=datum['U'], vs=datum['V'],
+            pressure=datum['P'], tracer=datum['T'])
 
         return datum
 
@@ -140,8 +142,9 @@ class GerrisReader(object):
             self.templates['output_file_template'].replace('\\', '')
         self.vertex_file = os.path.abspath(vertex_file)
 
-    def process_directory(self, directory, output_name=None,
-                          update=False, clean=False, show_progress=True):
+    def process_directory(self, directory=None, output_name=None,
+                          update=False, clean=False, show_progress=True,
+                          run_parameters=None):
         """ Process the Gerris output files to get values at given points
 
             :param directory: The directory to process
@@ -160,8 +163,11 @@ class GerrisReader(object):
             :param show_progress: If True, prints a progress bar. Optional,
                 defaults to True
             :type show_progress: bool
+            :returns: the name of the file containing the output data
         """
         # Get output name
+        if directory is None:
+            directory = os.path.abspath(os.getcwd())
         if output_name is None:
             root = os.path.abspath(directory)
             name = os.path.basename(root)
@@ -226,11 +232,15 @@ class GerrisReader(object):
                         data = FlowData(filename=output_name,
                                         n_snapshots=len(gfsfiles),
                                         n_samples=len(datum),
-                                        update=True)
-                        data[0] = datum
+                                        update=True,
+                                        scalar_datasets=('pressure', 'tracer'),
+                                        properties=run_parameters)
+                        data.set_snapshot(0, datum)
 
                     else:
-                        data[idx] = read_output_file(output_filename)
+                        data.set_snapshot(
+                            idx,
+                            read_output_file(output_filename))
 
                     # Clean up if required
                     if clean:
@@ -244,6 +254,12 @@ class GerrisReader(object):
             print err
 
         finally:
-            os.chdir(current_dir)
+            # Close handle to hdf5 file if it exists
+            try:
+                if data:
+                    data.close()
+            except UnboundLocalError:
+                # The data object doesn't exist, so don't worry
+                pass
 
-        return data
+            os.chdir(current_dir)

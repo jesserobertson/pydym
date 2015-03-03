@@ -27,6 +27,9 @@ setup(
     description='Dynamic mode decompositions of data in Python',
     author='Jess Robertson',
     author_email='jesse.robertson@csiro.au',
+    packages=find_packages(exclude=['tests', 'docs']),
+    test_suite='tests',
+    ext_modules=[],
     classifiers=[
         'Development Status :: 1 - Planning',
         'Environment :: Plugins',

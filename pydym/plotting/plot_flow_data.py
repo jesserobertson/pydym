@@ -1,4 +1,4 @@
-""" file:   plot_flow_data.py (pydym,plotting)
+""" file:   plot_flow_datum.py (pydym.plotting)
     author: Jess Robertson
             CSIRO Minerals Resources Flagship
     date:   Tuesday 24 June 2014
@@ -7,15 +7,25 @@
 """
 
 from __future__ import division
+
+import numpy
 import matplotlib.pyplot as plt
 import numpy
 
 
-def plot_flow_data(datum, axes=None, n_quiver=3, n_contours=20):
-    """ Plot the flow field in a FlowDatum instance
+def plot_flow_datum(data, axes=None, decimate_by=10):
+    """ Plot a FlowDatum instance
     """
+    xval, yval = data.position[0], data.position[1]
+    xlim = xval.min(), xval.max()
+    ylim = yval.min(), yval.max()
+    nx, ny = map(len, (xval, yval))
+    xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
+    xs, ys, Ps = data.interpolate('pressure')
+    _, _, Ts = data.interpolate('tracer')
+
+    # Plot the results
     if axes is None:
-        plt.figure(figsize=(11, 11))
         axes = plt.gca()
     axes.set_aspect('equal')
 
@@ -31,7 +41,7 @@ def plot_flow_data(datum, axes=None, n_quiver=3, n_contours=20):
     except AttributeError:
         pass
 
-    # Try for pressure field, fall back to
+    # Absolute velocity for colors
     datum['abs_velocity'] = \
       numpy.sqrt(datum.velocity[0] ** 2 + datum.velocity[1] ** 2)
     xs, ys, ps = datum.interpolate('abs_velocity')
@@ -52,3 +62,5 @@ def plot_flow_data(datum, axes=None, n_quiver=3, n_contours=20):
                    facecolor='white',
                    zorder=100))
     axes.set_axis_off()
+    axes.set_xlim(min(xs), max(xs))
+    axes.set_ylim(min(ys), max(ys))

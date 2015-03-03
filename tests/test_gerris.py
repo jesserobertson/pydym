@@ -46,10 +46,12 @@ class GerrisTest(unittest.TestCase):
         import pdb; pdb.set_trace()
 
         try:
-            data = self.reader.process_directory(GERRIS_DATA_DIR, update=True)
-            for key in data.keys():
-                self.assertTrue(key in self.expected_data.keys())
-                self.assertIsNotNone(data[key])
+            datafile = self.reader.process_directory(GERRIS_DATA_DIR,
+                                                     update=True)
+            with pydym.load(datafile) as data:
+                for key in data.keys():
+                    self.assertTrue(key in self.expected_data.keys())
+                    self.assertIsNotNone(data[key])
             self.assertTrue(os.path.exists(data.filename))
             data.close()
 
@@ -81,6 +83,7 @@ class GerrisTest(unittest.TestCase):
         subset = boxes[mask]
         subset[..., 2] = 0  # Store a z value of 0
         self.assertTrue(numpy.allclose(subset, expected_vertices))
+
 
 if __name__ == '__main__':
     unittest.main()

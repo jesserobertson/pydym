@@ -33,8 +33,8 @@ class FlowDataTest(unittest.TestCase):
         expected_keys = set(('velocity', 'position', 'pressure', 'tracer',
                              'snapshots'))
         self.assertIsNone(self.data.thin_by)
-        for key in self.data.keys():
-            self.assertTrue(key in expected_keys)
+        self.assertIsNotNone(self.data.snapshots)
+        for key in expected_keys:
             self.assertIsNotNone(self.data[key])
 
     def test_get_snapshots(self):
@@ -60,11 +60,8 @@ class FlowDataTest(unittest.TestCase):
     def test_get_item(self):
         """ Check that we can return simulation stuff
         """
-        for idx in xrange(self.data.n_snapshots):
-            self.assertIsNotNone(self.data[idx])
-            datum = self.data[idx]
-            for attr in ('velocity', 'position', 'pressure', 'tracer'):
-                self.assertIsNotNone(getattr(datum, attr))
+        for attr in ('velocity', 'position', 'pressure', 'tracer'):
+            self.assertIsNotNone(self.data[attr])
 
     def tearDown(self):
         # Close references to HDF5 file
