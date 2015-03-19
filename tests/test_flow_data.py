@@ -24,7 +24,7 @@ class FlowDataTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.test_datafile = os.path.join(TEST_DATA_DIR, 'test_data.hdf5')
+        self.test_datafile = os.path.join(TEST_DATA_DIR, 'simulations.hdf5')
         self.data = FlowData(self.test_datafile)
 
     def test_read_from_hdf5(self):
@@ -56,15 +56,6 @@ class FlowDataTest(unittest.TestCase):
         self.assertIsNotNone(self.data.snapshots)
         self.assertIsNotNone(self.data['snapshots/velocity'])
         self.assertIsNotNone(numpy.allclose(self.data.snapshots, old_snapshot))
-
-    def test_get_item(self):
-        """ Check that we can return simulation stuff
-        """
-        for idx in xrange(self.data.n_snapshots):
-            self.assertIsNotNone(self.data[idx])
-            datum = self.data[idx]
-            for attr in ('velocity', 'position', 'pressure', 'tracer'):
-                self.assertIsNotNone(getattr(datum, attr))
 
     def tearDown(self):
         # Close references to HDF5 file

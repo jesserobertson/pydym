@@ -125,8 +125,7 @@ class GerrisReader(object):
 
         # Find Gerris on this system
         self.templates['gerris'] = \
-            subprocess.check_output('which gerris2D', shell=True)
-        self.templates['gerris'] = self.templates['gerris'].strip('\n')
+            subprocess.check_output('which gerris2D', shell=True).strip('\n')
         self.templates.update(kwargs)
 
         # Generate regexes for simulation files and output files
@@ -221,6 +220,7 @@ class GerrisReader(object):
                     if not data:
                         datum = read_output_file(output_filename)
                         data = FlowData(filename=output_name,
+                                        scalar_datasets=('pressure', 'tracer'),
                                         n_snapshots=len(gfsfiles),
                                         n_samples=len(datum),
                                         update=True)

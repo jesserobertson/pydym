@@ -66,7 +66,7 @@ class FlowData(object):
         super(FlowData, self).__init__()
         self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
-        self.filename = filename
+        self.filename = os.path.abspath(filename)
         self.run_checks = run_checks
         self.vectors, self.scalars = vector_datasets, scalar_datasets
 
@@ -89,8 +89,9 @@ class FlowData(object):
         """ Initialize the FlowData object from an HDF5 resource
         """
         self._file = h5py.File(self.filename, 'a')
-        self.shape = self['properties']['shape'][()]
-        self.n_samples, self.n_snapshots = self.shape
+        self.properties = self['properties']
+        for attr in ('shape', 'n_samples', 'n_snapshots'):
+            setattr(self, attr, self.properties[attr][()])
         self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
         self.vectors = [n for n, v in self._file.items()
@@ -139,6 +140,11 @@ class FlowData(object):
                                        dtype=float,
                                        compression="gzip")
 
+        # Add properties to file
+        self.properties = self._file.create_group('properties')
+        for attr in ('shape', 'n_samples', 'n_snapshots'):
+            self.properties[attr] = getattr(self, attr)
+
     def __getitem__(self, value_or_key):
         """ Get the data associated with a given index or key
 
@@ -152,7 +158,7 @@ class FlowData(object):
 
             # Reconstruct FlowDatum
             datum = FlowDatum(
-                xs=self['position/x'][:, idx], ys=self['position/y'][:, idx],
+                xs=self['position/x'][:], ys=self['position/y'][:],
                 us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
 
             # Add other scalar and vector fields

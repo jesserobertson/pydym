@@ -16,7 +16,7 @@ import pydym
 # location of test data files
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "resources")
 GERRIS_DATA_DIR = os.path.join(os.path.dirname(__file__),
-                               "resources", "gerris_simulations")
+                               "resources", "simulations")
 
 
 class GerrisTest(unittest.TestCase):
@@ -26,7 +26,7 @@ class GerrisTest(unittest.TestCase):
 
     def setUp(self):
         self.expected_data = pydym.FlowData(
-            os.path.join(TEST_DATA_DIR, 'test_data.hdf5'))
+            os.path.join(TEST_DATA_DIR, 'simulations.hdf5'))
         self.reader = pydym.io.gerris.GerrisReader(
             directory=GERRIS_DATA_DIR,
             vertex_file=os.path.join(TEST_DATA_DIR, 'vertices.csv'))
@@ -43,15 +43,18 @@ class GerrisTest(unittest.TestCase):
         """ Processing a directory of Gerris simulations should work
         """
         try:
-            data = self.reader.process_directory(GERRIS_DATA_DIR, update=True)
+            data = self.reader.process_directory(GERRIS_DATA_DIR,
+                                                 output_name='test_data',
+                                                 update=True)
             for key in data.keys():
                 self.assertTrue(key in self.expected_data.keys())
                 self.assertIsNotNone(data[key])
-            self.assertTrue(os.path.exists(data.filename))
+            self.assertTrue(os.path.exists(
+                            os.path.join(GERRIS_DATA_DIR, data.filename)))
             data.close()
 
         finally:
-            filename = os.path.join(GERRIS_DATA_DIR, GERRIS_DATA_DIR + '.hdf5')
+            filename = os.path.join(GERRIS_DATA_DIR, 'test_data.hdf5')
             if os.path.exists(filename):
                 os.remove(filename)
             self.assertFalse(os.path.exists(filename))
