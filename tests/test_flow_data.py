@@ -31,7 +31,7 @@ class FlowDataTest(unittest.TestCase):
         """ FlowData should initialize ok from hdf5
         """
         expected_keys = set(('velocity', 'position', 'pressure', 'tracer',
-                             'snapshots'))
+                             'snapshots', 'properties'))
         self.assertIsNone(self.data.thin_by)
         for key in self.data.keys():
             self.assertTrue(key in expected_keys)
