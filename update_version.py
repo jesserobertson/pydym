@@ -38,6 +38,8 @@ def update_version():
             ver = stdout.strip().split('-')
             if len(ver) > 1:
                 ver = ver[0] + '.dev' + ver[1]
+            else:
+                ver = ver[0]
     except EnvironmentError:
         print (
             "Unable to run git, leaving pydym/_version.py alone")
