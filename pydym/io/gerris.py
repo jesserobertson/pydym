@@ -233,7 +233,6 @@ class GerrisReader(object):
                                         n_snapshots=len(gfsfiles),
                                         n_samples=len(datum),
                                         update=True,
-                                        scalar_datasets=('pressure', 'tracer'),
                                         properties=run_parameters)
                         data.set_snapshot(0, datum)
 
