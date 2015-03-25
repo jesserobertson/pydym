@@ -15,8 +15,9 @@ import pydym
 
 # location of test data files
 LOCAL = os.path.abspath(os.path.dirname(__file__))
-TEST_DATA_DIR = os.path.join(LOCAL, "resources")
-GERRIS_DATA_DIR = os.path.join(TEST_DATA_DIR, "gerris_simulations")
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "resources")
+GERRIS_DATA_DIR = os.path.join(os.path.dirname(__file__),
+                               "resources", "simulations")
 
 class GerrisTest(unittest.TestCase):
 
@@ -24,6 +25,8 @@ class GerrisTest(unittest.TestCase):
     """
 
     def setUp(self):
+        self.expected_data = pydym.FlowData(
+            os.path.join(TEST_DATA_DIR, 'simulations.hdf5'))
         self.reader = pydym.io.gerris.GerrisReader(
             vertex_file=os.path.join(TEST_DATA_DIR, 'vertices.csv'))
 
@@ -43,20 +46,20 @@ class GerrisTest(unittest.TestCase):
                              '{0}.hdf5'.format(os.path.basename(
                                                 GERRIS_DATA_DIR)))
         expected_data = pydym.FlowData(dfile)
-        import pdb; pdb.set_trace()
 
         try:
-            datafile = self.reader.process_directory(GERRIS_DATA_DIR,
-                                                     update=True)
-            with pydym.load(datafile) as data:
-                for key in data.keys():
-                    self.assertTrue(key in self.expected_data.keys())
-                    self.assertIsNotNone(data[key])
-            self.assertTrue(os.path.exists(data.filename))
+            data = self.reader.process_directory(GERRIS_DATA_DIR,
+                                                 output_name='test_data',
+                                                 update=True)
+            for key in data.keys():
+                self.assertTrue(key in self.expected_data.keys())
+                self.assertIsNotNone(data[key])
+            self.assertTrue(os.path.exists(
+                            os.path.join(GERRIS_DATA_DIR, data.filename)))
             data.close()
 
         finally:
-            filename = os.path.join(GERRIS_DATA_DIR, GERRIS_DATA_DIR + '.hdf5')
+            filename = os.path.join(GERRIS_DATA_DIR, 'test_data.hdf5')
             if os.path.exists(filename):
                 os.remove(filename)
             self.assertFalse(os.path.exists(filename))

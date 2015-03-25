@@ -75,7 +75,7 @@ class FlowData(object):
         self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
         self.snapshot_interval = snapshot_interval
-        self.filename = filename
+        self.filename = os.path.abspath(filename)
         self.run_checks = run_checks
         self.vectors, self.scalars = vector_datasets, scalar_datasets
         self.properties = properties
@@ -104,11 +104,9 @@ class FlowData(object):
         """
         self._file = h5py.File(self.filename, 'a')
         self.properties = self['properties']
-        self.shape = self['properties/shape']
-        self.n_samples = int(self['properties/n_samples'][()])
-        self.n_dimensions = int(self['properties/n_dimensions'][()])
-        self.n_snapshots = int(self['properties/n_snapshots'][()])
-        self.snapshot_interval = self['properties/snapshot_interval'][()]
+        for attr in ('shape', 'n_samples', 'n_snapshots', 'snapshot_interval'):
+            setattr(self, attr, self.properties[attr][()])
+        self.n_dimensions = len(self['position'].keys())
         self.axis_labels = self['position'].keys()
         self.vectors = [n for n, v in self._file.items()
                         if type(v) is h5py.Group
@@ -166,9 +164,10 @@ class FlowData(object):
                                        dtype=float,
                                        compression="gzip")
 
-        # Add properties
-        grp = self._file.create_group('properties')
-
+        # Add properties to file
+        self.properties = self._file.create_group('properties')
+        for attr in ('shape', 'n_samples', 'n_snapshots'):
+            self.properties[attr] = getattr(self, attr)
 
     def __getitem__(self, value_or_key):
         """ Get the data associated with a given index or key
