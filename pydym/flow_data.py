@@ -75,7 +75,7 @@ class FlowData(object):
         self.snapshot_keys = snapshot_keys
         self.thin_by = thin_by
         self.shape = (self.n_samples, self.n_snapshots)
-        self.axis_labels = list(AXIS_LABELS.keys())[:self._ndimensions]
+        self.axis_labels = list(AXIS_LABELS.keys())[:self.n_dimensions]
         self._snapshots = None
 
         # Initialize file

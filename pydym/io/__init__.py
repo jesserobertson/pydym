@@ -6,7 +6,6 @@
     description: Imports for I/O module
 """
 
-import gerris
-import matlab
+from . import gerris, matlab
 
-__all__ = [gerris, matlab]
+__all__ = ["gerris", "matlab"]

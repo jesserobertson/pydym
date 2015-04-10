@@ -213,7 +213,7 @@ class GerrisReader(object):
                                 self.command_template.format(time_str),
                                 shell=True,
                                 stderr=subprocess.STDOUT)
-                        except subprocess.CalledProcessError, err:
+                        except subprocess.CalledProcessError as err:
                             print(err.output)
                             raise err
 
@@ -236,7 +236,7 @@ class GerrisReader(object):
                     if show_progress:
                         pbar.animate(idx + 1)
 
-        except IOError, err:
+        except IOError as err:
             print(err)
 
         finally:
