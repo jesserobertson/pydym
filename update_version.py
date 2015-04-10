@@ -6,6 +6,8 @@
     description: Tool to update the version number using `git describe`
 """
 
+from __future__ import division, print_function
+
 import subprocess
 import os
 from setuptools import Command
@@ -25,19 +27,21 @@ __version__ = '{0}'
 def update_version():
     # Query git for the current description
     if not os.path.isdir(".git"):
-        print ("This does not appear to be a Git repository, leaving "
-                    "pydym/_version.py alone.")
+        print("This does not appear to be a Git repository, leaving "
+              "pydym/_version.py alone.")
         return
     try:
-        p = subprocess.Popen(["git", "describe", "--always"],
+        p = subprocess.Popen(["git", "describe", "--always", "--tags"],
                              stdout=subprocess.PIPE)
-        stdout = p.communicate()[0]
+        stdout = p.communicate()[0].decode('utf-8')
         if p.returncode != 0:
             raise EnvironmentError
         else:
             ver = stdout.strip().split('-')
             if len(ver) > 1:
                 ver = ver[0] + '.dev' + ver[1]
+            else:
+                ver = ver[0]
     except EnvironmentError:
         print (
             "Unable to run git, leaving pydym/_version.py alone")
@@ -48,7 +52,7 @@ def update_version():
     if current_ver != ver:
         print ("Version {0} out of date, updating to {1}".format(
             current_ver, ver))
-        with open('pydym/_version.py', 'wb') as fhandle:
+        with open('pydym/_version.py', 'w') as fhandle:
             fhandle.write(VERSION_PY_TEMPLATE.format(ver))
 
 

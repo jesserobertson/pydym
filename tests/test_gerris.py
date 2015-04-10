@@ -6,6 +6,8 @@
     description: Unit tests for reading Gerris simulations
 """
 
+from __future__ import division, print_function
+
 import unittest
 import os
 import subprocess
@@ -14,10 +16,10 @@ import numpy
 import pydym
 
 # location of test data files
+LOCAL = os.path.abspath(os.path.dirname(__file__))
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "resources")
 GERRIS_DATA_DIR = os.path.join(os.path.dirname(__file__),
                                "resources", "simulations")
-
 
 class GerrisTest(unittest.TestCase):
 
@@ -28,7 +30,6 @@ class GerrisTest(unittest.TestCase):
         self.expected_data = pydym.FlowData(
             os.path.join(TEST_DATA_DIR, 'simulations.hdf5'))
         self.reader = pydym.io.gerris.GerrisReader(
-            directory=GERRIS_DATA_DIR,
             vertex_file=os.path.join(TEST_DATA_DIR, 'vertices.csv'))
 
     def test_reader(self):
@@ -42,6 +43,12 @@ class GerrisTest(unittest.TestCase):
     def test_process_directory(self):
         """ Processing a directory of Gerris simulations should work
         """
+        # Load up expected data
+        dfile = os.path.join(TEST_DATA_DIR,
+                             '{0}.hdf5'.format(os.path.basename(
+                                                GERRIS_DATA_DIR)))
+        expected_data = pydym.FlowData(dfile)
+
         try:
             data = self.reader.process_directory(GERRIS_DATA_DIR,
                                                  output_name='test_data',
@@ -81,3 +88,7 @@ class GerrisTest(unittest.TestCase):
         subset = boxes[mask]
         subset[..., 2] = 0  # Store a z value of 0
         self.assertTrue(numpy.allclose(subset, expected_vertices))
+
+
+if __name__ == '__main__':
+    unittest.main()

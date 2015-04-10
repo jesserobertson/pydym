@@ -6,40 +6,72 @@
     description: Dynamic decomposition of a data stream
 """
 
-from __future__ import division
+from __future__ import division, print_function
 
-import numpy
-from numpy.linalg import svd
+from scipy import linalg
+from numpy.linalg import matrix_rank
+from numpy import dot, hstack, vstack, trace, diag, zeros
 
 from .utilities import foldr, herm_transpose
 
+def dynamic_decomposition(data, burn=100):
+    """ Perform a dynamic decomposition on a dataset
 
-def dynamic_decomposition(flow_data, return_svd=False):
-    """ Decompose the data in a set of flow measurements into SVD components
+        We want to minimize the least-squares deviation between the matrix of
+        snapshots `past` and the linear combination of the DMD modes.
 
-        Calculates an approximation S to the dynamic matrix A for a
-        given set of velocity vectors.
+        Can be formulated (see Jovanovic et al, 2014; Eqn 4) as:
 
-        Velocity vectors should be given as complex numbers
-        (i.e. $U = u + iv$).
+            minimize || sigma * tr(V) - Y * diag(x) * Z ||_F^2
 
-        :returns: S, where S is the approximant. If return_svd is
-            True, also returns the singular value decomposition
-            U, Sigma, V
+        where sigma and V are the singular values and right singular vectors of
+        $F_{dmd}$, $Y$ is the matrix of eigenvectors of $F_{dmd}$, and $Z$ is
+        the Vandermond matrix formed from the eigenvalues of $F_{dmd}$:
+        $Z_{ij} = [\mu_j^i]$ To solve we just rewrite as optimization
+        problem min J(x) where:
+
+            J(x) = tr(x) . P . x - tr(q) . x - tr(x) . q + s
+
+        (Jovanovic Eqn 6) which has solution x = P^{-1} q.
     """
     # Subdivide the time sequence into the past and current states
-    past = flow_data.snapshots[:, :-1]
-    current = flow_data.snapshots[:, 1:]
+    past = data.snapshots[:, burn:-1]
+    current = data.snapshots[:, (burn + 1):]
 
     # Calculate SVD of past data array
-    U, sigma, Vstar = svd(past, full_matrices=False)
+    U, sigma, Vstar = linalg.svd(past, full_matrices=False)
+    V = herm_transpose(Vstar)
 
-    # Calculate apprioximate dynamic array given current data
-    S = foldr(numpy.dot, (herm_transpose(U), current, herm_transpose(Vstar),
-                          numpy.diag(1 / sigma)))
+    ## Calculate approximate dynamic array given current data
+    # and calculate eigendecomposition
+    Fdmd = foldr(dot, (herm_transpose(U), current, V, diag(1 / sigma)))
+    rank = matrix_rank(Fdmd)
+    eigvals, eigvecs = linalg.eig(Fdmd)
 
-    # Send back results
-    if return_svd:
-        return S, U, sigma, Vstar
-    else:
-        return S
+    # Construct Vandermonde matrix from eigenvalue
+    n_snapshots = Vstar.shape[1]
+    eigvals_r = eigvals.reshape(rank, 1)
+    vandermonde = hstack((eigvals_r ** n for n in range(n_snapshots)))
+
+    ## Compute mode weightings
+    # Construct matrices
+    P = (dot(herm_transpose(eigvecs), eigvecs)
+         * (dot(vandermonde, herm_transpose(vandermonde)).conj())).real
+    tmp = dot(diag(sigma), Vstar)
+    q = diag(foldr(dot, (vandermonde, herm_transpose(tmp), eigvecs)))
+    s = trace(dot(herm_transpose(tmp), tmp))
+
+    # Calculate optimal vector of amplitudes, x
+    L = linalg.cholesky(P, lower=True)
+    amplitudes = linalg.solve(herm_transpose(L), linalg.solve(L, q))
+
+    return {
+        'eigenvalues': eigvals,
+        'eigenvectors': eigvecs,
+        'amplitudes': amplitudes,
+        'modes': (dot(U, eigvecs) * amplitudes).real,
+        'intermediate_values': {
+            'svd': (U, sigma, V),
+            'weights': (P, q, s)
+        }
+    }

@@ -4,24 +4,42 @@
 		{
 			"path": ".",
 			"name": "Project files",
-			"folder_exclude_patterns": ["pydym", "logs", "tests", "build", "dist", "*.egg-info"],
+			"folder_exclude_patterns": ["pydym", "logs", "tests", "build", "dist", "*.egg-info", "__pycache__"],
 			"file_exclude_patterns": ["*.sublime-workspace"]
 		},
 		{
 			"path": "pydym",
 			"name": "Source",
-			"folder_exclude_patterns": [],
+			"folder_exclude_patterns": ["__pycache__"],
 			"file_exclude_patterns": ["*.pyc"]
 		},
 		{
 			"path": "tests",
 			"name": "Tests",
-			"folder_exclude_patterns": [],
+			"folder_exclude_patterns": ["__pycache__"],
 			"file_exclude_patterns": ["*.pyc"]
 		}
 	],
 	"settings":
 	{
 		"tab_size": 4
-	}
+	},
+	"build_systems":
+	[
+		{
+			"name": "Production build",
+			"cmd": ["python", "setup.py", "build"],
+			"working_dir": "$project_path"
+		},
+		{
+			"name": "Install",
+			"cmd": ["python", "setup.py", "install", "--user"],
+			"working_dir": "$project_path"
+		},
+		{
+			"name": "Run test suite",
+			"cmd": ["python", "setup.py", "test"],
+			"working_dir": "$project_path"
+		}
+	]
 }
