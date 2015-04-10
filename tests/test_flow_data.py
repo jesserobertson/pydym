@@ -6,6 +6,8 @@
     description: Unit tests for flow data objects
 """
 
+from __future__ import division, print_function
+
 import unittest
 import os
 import subprocess
@@ -57,15 +59,12 @@ class FlowDataTest(unittest.TestCase):
         self.assertIsNotNone(self.data['snapshots/velocity'])
         self.assertIsNotNone(numpy.allclose(self.data.snapshots, old_snapshot))
 
-<<<<<<< HEAD
     def test_get_item(self):
         """ Check that we can return simulation stuff
         """
         for attr in ('velocity', 'position', 'pressure', 'tracer'):
             self.assertIsNotNone(self.data[attr])
 
-=======
->>>>>>> master
     def tearDown(self):
         # Close references to HDF5 file
         self.data.close()
