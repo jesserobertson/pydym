@@ -7,6 +7,7 @@
 """
 
 from __future__ import division
+
 import numpy
 from numpy.linalg import svd
 

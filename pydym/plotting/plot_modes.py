@@ -6,6 +6,8 @@
     description: Plotting dynamic mode data
 """
 
+from __future__ import division
+
 from .utilities import interpolator
 
 

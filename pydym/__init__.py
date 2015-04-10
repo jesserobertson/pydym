@@ -6,11 +6,9 @@
     description: Imports for pydym
 """
 
-from dynamic_decomposition import dynamic_decomposition
-from flow_data import FlowData, FlowDatum
-from modes import Modes, get_modes
-import io
-import plotting
+from .dynamic_decomposition import dynamic_decomposition
+from .flow_data import FlowData, FlowDatum
+from . import io, plotting
 
-__all__ = [io, plotting, dynamic_decomposition, get_modes,
-           FlowData, FlowDatum, Modes]
+__all__ = ["io", "plotting", "dynamic_decomposition"
+           "FlowData", "FlowDatum"]

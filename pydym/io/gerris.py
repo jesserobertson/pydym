@@ -6,7 +6,8 @@
     description: Gerris I/O module for pydym
 """
 
-from __future__ import division
+from __future__ import division, print_function
+
 import re
 import numpy
 import pandas
@@ -213,7 +214,7 @@ class GerrisReader(object):
                                 shell=True,
                                 stderr=subprocess.STDOUT)
                         except subprocess.CalledProcessError, err:
-                            print err.output
+                            print(err.output)
                             raise err
 
                     # Generate data objects
@@ -236,7 +237,7 @@ class GerrisReader(object):
                         pbar.animate(idx + 1)
 
         except IOError, err:
-            print err
+            print(err)
 
         finally:
             os.chdir(current_dir)
