@@ -6,6 +6,13 @@
     description: Sparsity-preserving dynamic decomposition of a data stream
 """
 
+from __future__ import division, print_function
+
+from scipy import linalg
+from numpy import dot, hstack, vstack, trace, diag, zeros
+
+from .utilities import herm_transpose, foldr
+
 def sparsify_dynamic_decomposition(results, gamma=1,
                                    rho=1, max_iter=10000,
                                    absolute_tol=1e-6,
@@ -64,16 +71,16 @@ def sparsify_dynamic_decomposition(results, gamma=1,
         epsdual = sqrt(n_variables) * absolute_tol \
                   + relative_tol * linalg.norm(y)
         if (rprim < epsprim) and (rdual < epsdual):
-            print ' ** ADMM converged **'
-            print ' -- ADMM step {0}'.format(step)
-            print '    primal residual: {0} (eps = {1})'.format(rprim, epsprim)
-            print '    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual)
+            print(' ** ADMM converged **')
+            print(' -- ADMM step {0}'.format(step))
+            print('    primal residual: {0} (eps = {1})'.format(rprim, epsprim))
+            print('    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual))
             break
         else:
             if step % 50 == 0:
-                print ' -- ADMM step {0}'.format(step)
-                print '    primal residual: {0} (eps = {1})'.format(rprim, epsprim)
-                print '    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual)
+                print(' -- ADMM step {0}'.format(step))
+                print('    primal residual: {0} (eps = {1})'.format(rprim, epsprim))
+                print('    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual))
             z = z_new
 
     # Record some output data
