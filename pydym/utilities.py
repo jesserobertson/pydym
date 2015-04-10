@@ -6,6 +6,8 @@
     description: Utility functions for pydym
 """
 
+from __future__ import division, print_function
+
 import sys
 import numpy
 from matplotlib import mlab
@@ -59,7 +61,7 @@ class ProgressBar:
         self.__update_amount(0)
 
     def animate(self, iter):
-        print '\r', self,
+        print('\r', self, end='')
         sys.stdout.flush()
         self.update_iteration(iter + 1)
 

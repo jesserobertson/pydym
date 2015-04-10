@@ -6,7 +6,8 @@
     description: Gerris I/O module for pydym
 """
 
-from __future__ import division
+from __future__ import division, print_function
+
 import re
 import numpy
 import pandas
@@ -221,8 +222,8 @@ class GerrisReader(object):
                                 self.command_template.format(time_str),
                                 shell=True,
                                 stderr=subprocess.STDOUT)
-                        except subprocess.CalledProcessError, err:
-                            print err.output
+                        except subprocess.CalledProcessError as err:
+                            print(err.output)
                             raise err
 
                     # Generate data objects
@@ -247,10 +248,10 @@ class GerrisReader(object):
                     if show_progress:
                         pbar.animate(idx + 1)
 
-                print 'File saved to {0}'.format(output_name)
+                print('File saved to {0}'.format(output_name))
 
-        except IOError, err:
-            print err
+        except IOError as err:
+            print(err)
 
         finally:
             # Close handle to hdf5 file if it exists

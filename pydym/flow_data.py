@@ -7,6 +7,7 @@
 """
 
 from __future__ import division
+
 import numpy
 import h5py
 import os
@@ -53,7 +54,7 @@ class FlowDatum(dict):
         xval, yval = self.position[0], self.position[1]
         xlim = xval.min(), xval.max()
         ylim = yval.min(), yval.max()
-        nx, ny = map(len, (xval, yval))
+        nx, ny = len(xval), len(yval)
 
         # Generate and return interpolation
         xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
@@ -84,8 +85,7 @@ class FlowData(object):
         self.snapshot_keys = snapshot_keys
         self.thin_by = thin_by
         self.shape = (self.n_samples, self.n_snapshots)
-        self.axis_labels = [AXIS_LABELS.keys()[i]
-                            for i in range(self.n_dimensions)]
+        self.axis_labels = list(AXIS_LABELS.keys())[:self.n_dimensions]
         self._snapshots = None
         self._modes = None
 
@@ -420,7 +420,7 @@ class FlowData(object):
 
         # Generate group for snapshots
         snapshot_grp = self._file.require_group('snapshots')
-        if self.snapshot_dataset_key in snapshot_grp.keys():
+        if self.snapshot_dataset_key in set(snapshot_grp.keys()):
             del snapshot_grp[self.snapshot_dataset_key]
         self._snapshots = snapshot_grp.require_dataset(
             name=self.snapshot_dataset_key, shape=snapshot_size, dtype=float,
