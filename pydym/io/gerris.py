@@ -30,8 +30,9 @@ def read_output_file(output_file):
         header = [regex.findall(k)[0]
                   for k in fhandle.readline().split()[1:]]
 
-        # Read in the rest of the file using pandas
-        snapshot = pandas.read_table(fhandle, sep=' ', names=header)
+        # Read in the rest of the file using numpy
+        data = numpy.loadtxt(fhandle)
+        snapshot = {h: data[:, header.index(h)] for h in header}
         datum = Datum(
             position=numpy.vstack([snapshot['x'], snapshot['y']]),
             velocity=numpy.vstack([snapshot['U'], snapshot['V']]),

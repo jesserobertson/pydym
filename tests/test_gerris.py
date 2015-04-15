@@ -54,7 +54,7 @@ class GerrisTest(unittest.TestCase):
             # Process the directory
             self.reader.process_directory(GERRIS_DATA_DIR,
                                           output_name=output_name,
-                                          update=True, clean=True)
+                                          update=True, clean=False)
             output = os.path.join(GERRIS_DATA_DIR, output_name)
             self.assertTrue(os.path.exists(output))
 
