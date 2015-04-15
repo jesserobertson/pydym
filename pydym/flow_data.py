@@ -310,22 +310,30 @@ class FlowData(object):
     def generate_modes(self):
         """ Calculate the dynamic modes from the current shapshot
         """
-        S, U, sigma, Vstar = dynamic_decomposition(self, return_svd=True)
-        V = herm_transpose(Vstar)
-        mode_dict = {
-            'operator': S,
-            'spatial': U,
-            'coeffs': sigma,
-            'temporal': V
-        }
-        mode_grp = self._file.require_group('modes')
-        for key, values in mode_dict.items():
+        # Generate the dynamic decomposition
+        results = dynamic_decomposition(self)
+
+        # Add regular dynamic mode info
+        self._modes = mode_grp = self._file.require_group('modes')
+        for key, values in results.items():
+            if key == 'intermediate_values':
+                continue
             dset = mode_grp.require_dataset(
                 name=self.snapshot_dataset_key + '_' + key,
                 shape=values.shape,
                 dtype=values.dtype)
             dset[...] = values
-        self._modes = mode_grp
+
+        # Add POD modes (from SVD) to data
+        pod_data = zip(results['intermediate_values']['svd'],
+                       ('spatial', 'pod_coeffs', 'temporal'))
+        for values, name in pod_data:
+            dset = mode_grp.require_dataset(
+                name=self.snapshot_dataset_key + '_' + name,
+                shape=values.shape,
+                dtype=values.dtype)
+            dset[...] = values
+        
 
     def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
         """ Set the properties used to generate snapshots
