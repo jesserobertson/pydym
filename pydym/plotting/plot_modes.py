@@ -6,14 +6,15 @@
     description: Plotting dynamic mode data
 """
 
+from __future__ import division
+
 from .utilities import interpolator
 
 
 def plot_modes(data, axes=None, n_quiver=3, n_contours=20):
     """ Plot the modes derived from a dynamic decomposition of the flow data.
     """
-    xs, ys, interp = interpolator(data)
-
+    xs, ys, interp = datum.interpolator()
     abs_velocity = data.velocity[:, ]
 
     # Plot the results
@@ -21,7 +22,7 @@ def plot_modes(data, axes=None, n_quiver=3, n_contours=20):
         plt.figure(figsize=(11, 11))
         axes = plt.gca()
     axes.set_aspect('equal')
-    axes.contourf(xs, ys, Ps, n_contours,
+    axes.contourf(xs, ys, abs_velocity, n_contours,
                   cmap=plt.get_cmap('RdYlBu'),
                   alpha=0.6)
     axes.quiver(data.position[::n_quiver, 0],
@@ -36,4 +37,5 @@ def plot_modes(data, axes=None, n_quiver=3, n_contours=20):
                    facecolor='white'))
     axes.set_axis_off()
     axes.set_xlim(min(xs), max(xs))
-    axes.set_ylim(min(ys), max(ys
+    axes.set_ylim(min(ys), max(ys))
+    axes.set_aspect('equal')

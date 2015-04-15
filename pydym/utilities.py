@@ -6,7 +6,33 @@
     description: Utility functions for pydym
 """
 
+from __future__ import division, print_function
+
 import sys
+import numpy
+from matplotlib import mlab
+from collections import OrderedDict
+
+
+AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
+
+
+def interpolate(position, values, axis=None, decimate_by=None):
+    """ Return the given attribute interpolated over a regular grid
+    """
+    # Generate a position grid
+    xval, yval = position[0], position[1]
+    if decimate_by:
+        xval, yval = xval[::decimate_by], yval[::decimate_by]
+        values = values[::decimate_by]
+    xlim = xval.min(), xval.max()
+    ylim = yval.min(), yval.max()
+    nx, ny = len(xval), len(yval)
+
+    # Generate and return interpolation
+    xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
+    zs = mlab.griddata(xval, yval, values, xs, ys, interp='linear')
+    return xs, ys, zs
 
 
 def herm_transpose(array):
@@ -35,7 +61,7 @@ class ProgressBar:
         self.__update_amount(0)
 
     def animate(self, iter):
-        print '\r', self,
+        print('\r', self, end='')
         sys.stdout.flush()
         self.update_iteration(iter + 1)
 

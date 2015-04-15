@@ -9,3 +9,4 @@ vertices.csv
 *.png
 *.sublime-workspace
 *.pyc
+__pycache__

@@ -6,6 +6,8 @@
     description: Unit tests for flow data objects
 """
 
+from __future__ import division, print_function
+
 import unittest
 import os
 import subprocess
@@ -33,8 +35,8 @@ class FlowDataTest(unittest.TestCase):
         expected_keys = set(('velocity', 'position', 'pressure', 'tracer',
                              'snapshots', 'properties'))
         self.assertIsNone(self.data.thin_by)
-        for key in self.data.keys():
-            self.assertTrue(key in expected_keys)
+        self.assertIsNotNone(self.data.snapshots)
+        for key in expected_keys:
             self.assertIsNotNone(self.data[key])
 
     def test_get_snapshots(self):
@@ -57,11 +59,12 @@ class FlowDataTest(unittest.TestCase):
         self.assertIsNotNone(self.data['snapshots/velocity'])
         self.assertIsNotNone(numpy.allclose(self.data.snapshots, old_snapshot))
 
+    def test_get_item(self):
+        """ Check that we can return simulation stuff
+        """
+        for attr in ('velocity', 'position', 'pressure', 'tracer'):
+            self.assertIsNotNone(self.data[attr])
+
     def tearDown(self):
         # Close references to HDF5 file
         self.data.close()
-
-        # Reset the datafile to the version in the repo (since we added
-        # snapshots etc)
-        subprocess.call('git checkout -- {0}'.format(
-            os.path.join(TEST_DATA_DIR, 'test_data.hdf5')), shell=True)

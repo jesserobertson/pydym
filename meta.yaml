@@ -1,0 +1,45 @@
+package:
+  name: pydym
+  version: {{ environ.get('GIT_DESCRIBE_TAG', '') }}
+
+build:
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+
+  # Note that this will override the default build string with the Python
+  # and NumPy versions
+  string: {{ environ.get('GIT_BUILD_STR', '') }}
+
+source:
+  git_url: ./
+
+requirements:
+  build:
+    - python
+    - h5py >=2.0.0
+    - matplotlib >=1.0.0
+    - numpy >=1.8.0
+    - scipy >=0.10.0
+
+  run:
+    - python
+    - h5py >=2.0.0
+    - matplotlib >=1.0.0
+    - numpy >=1.8.0
+    - scipy >=0.10.0
+
+test:
+  # Python imports
+  imports:
+    - pydym
+
+  commands:
+    python run_test.py
+
+about:
+  home: http://github.com/jesserobertson/pydym
+  license: BSD License or MIT License
+  summary: 'Dynamic mode decompositions in Python'
+
+# See
+# http://docs.continuum.io/conda/build.html for
+# more information about meta.yaml
