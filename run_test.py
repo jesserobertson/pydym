@@ -13,11 +13,16 @@ import sys
 import unittest
 import pydym
 
+from tests.resources.update_resources import main as update_resources
+
 def main():
     """ Run the tests!
     """
     # Print version for logging purposes
     print('pydym version: {0}'.format(pydym.__version__))
+
+    # Update test resources
+    update_resources()
 
     # Glom tests together and run them
     suite = unittest.defaultTestLoader.discover('tests')
