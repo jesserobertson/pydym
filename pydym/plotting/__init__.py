@@ -6,8 +6,7 @@
     description: Imports for plotting module
 """
 
-from eigenplots import eigenplot, logeigenplot
-from plot_flow_data import plot_flow_data
-# from plot_modes import plot_modes
+from .eigenplots import eigenplot, logeigenplot
+from .plot_flow_data import plot_flow_datum
 
-__all__ = ['eigenplot', 'logeigenplot', 'plot_flow_data']
+__all__ = ['eigenplot', 'logeigenplot', 'plot_flow_datum']

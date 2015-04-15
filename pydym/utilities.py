@@ -25,7 +25,7 @@ def interpolate(position, values, axis=None, decimate_by=None):
         values = values[::decimate_by]
     xlim = xval.min(), xval.max()
     ylim = yval.min(), yval.max()
-    nx, ny = map(len, (xval, yval))
+    nx, ny = len(xval), len(yval)
 
     # Generate and return interpolation
     xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
@@ -59,7 +59,7 @@ class ProgressBar:
         self.__update_amount(0)
 
     def animate(self, iter):
-        print '\r', self,
+        print('\r', self, end='')
         sys.stdout.flush()
         self.update_iteration(iter + 1)
 

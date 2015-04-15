@@ -41,7 +41,7 @@ def sparsify_dynamic_decomposition(results, gamma=1,
     z = zeros(n_variables)  # Old copy of x
 
     # ADMM loop
-    for step in xrange(max_iter):
+    for step in range(max_iter):
         # Minimize x
         tmp = q + (rho / 2.) * (z - y / rho)
         x_new = linalg.solve(Lstar, linalg.solve(L, tmp))
@@ -60,20 +60,20 @@ def sparsify_dynamic_decomposition(results, gamma=1,
 
         # Check stopping criteria
         epsprim = sqrt(n_variables) * absolute_tol \
-                  + relative_tol * max(map(linalg.norm, (x_new, z_new)))
+                  + relative_tol * max([linalg.norm(x) for x in (x_new, z_new)])
         epsdual = sqrt(n_variables) * absolute_tol \
                   + relative_tol * linalg.norm(y)
         if (rprim < epsprim) and (rdual < epsdual):
-            print ' ** ADMM converged **'
-            print ' -- ADMM step {0}'.format(step)
-            print '    primal residual: {0} (eps = {1})'.format(rprim, epsprim)
-            print '    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual)
+            print((' ** ADMM converged **\n'
+                   + ' -- ADMM step {0}\n'.format(step)
+                   + '    primal residual: {0} (eps = {1})\n'.format(rprim, epsprim)
+                   + '    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual)))
             break
         else:
             if step % 50 == 0:
-                print ' -- ADMM step {0}'.format(step)
-                print '    primal residual: {0} (eps = {1})'.format(rprim, epsprim)
-                print '    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual)
+                print((' -- ADMM step {0}\n'.format(step)
+                       + '    primal residual: {0} (eps = {1})\n'.format(rprim, epsprim)
+                       + '    dual residual:   {0} (eps = {1})\n'.format(rdual, epsdual)))
             z = z_new
 
     # Record some output data

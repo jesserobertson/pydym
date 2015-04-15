@@ -19,7 +19,7 @@ def plot_flow_datum(data, axes=None, decimate_by=10):
     xval, yval = data.position[0], data.position[1]
     xlim = xval.min(), xval.max()
     ylim = yval.min(), yval.max()
-    nx, ny = map(len, (xval, yval))
+    nx, ny = len(xval), len(yval)
     xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
     xs, ys, Ps = data.interpolate('pressure')
     _, _, Ts = data.interpolate('tracer')

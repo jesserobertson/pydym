@@ -53,7 +53,7 @@ class FlowDatum(dict):
         xval, yval = self.position[0], self.position[1]
         xlim = xval.min(), xval.max()
         ylim = yval.min(), yval.max()
-        nx, ny = map(len, (xval, yval))
+        nx, ny = len(xval), len(yval)
 
         # Generate and return interpolation
         xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
@@ -84,8 +84,8 @@ class FlowData(object):
         self.snapshot_keys = snapshot_keys
         self.thin_by = thin_by
         self.shape = (self.n_samples, self.n_snapshots)
-        self.axis_labels = [AXIS_LABELS.keys()[i]
-                            for i in range(self.n_dimensions)]
+        axis_keys = list(AXIS_LABELS.keys())
+        self.axis_labels = [axis_keys[i] for i in range(self.n_dimensions)]
         self._snapshots = None
         self._modes = None
 
@@ -106,8 +106,8 @@ class FlowData(object):
         self.properties = self['properties']
         for attr in ('shape', 'n_samples', 'n_snapshots', 'snapshot_interval'):
             setattr(self, attr, self.properties[attr][()])
-        self.n_dimensions = len(self['position'].keys())
-        self.axis_labels = self['position'].keys()
+        self.n_dimensions = len(self['position'])
+        self.axis_labels = tuple(self['position'].keys())
         self.vectors = [n for n, v in self._file.items()
                         if type(v) is h5py.Group
                         and n not in ('snapshots', 'properties')]
@@ -223,7 +223,7 @@ class FlowData(object):
     def __iter__(self):
         """ Iterate over the data snapshots
         """
-        for idx in xrange(self.n_snapshots):
+        for idx in range(self.n_snapshots):
             yield self.get_snapshot(idx)
 
     def __enter__(self):
