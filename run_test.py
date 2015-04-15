@@ -12,6 +12,7 @@ from __future__ import print_function, division
 import sys
 import unittest
 import pydym
+import os
 
 from tests.resources.update_resources import main as update_resources
 
@@ -21,8 +22,9 @@ def main():
     # Print version for logging purposes
     print('pydym version: {0}'.format(pydym.__version__))
 
-    # Update test resources
-    update_resources()
+    # Update test resources if required
+    if not os.path.exists('tests/resources/simulations.hdf5'):
+        update_resources()
 
     # Glom tests together and run them
     suite = unittest.defaultTestLoader.discover('tests')
