@@ -28,6 +28,9 @@ class Datum(object):
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
+    def __getitem__(self, key):
+        return getattr(self, key)
+
     def interpolate(self, attribute, axis=None, decimate_by=None):
         """ Return the given attribute interpolated over a regular grid
         """
@@ -37,11 +40,3 @@ class Datum(object):
             values = values[AXIS_LABELS[axis]]
 
         return interpolate(self.position, values, decimate_by=decimate_by)
-
-
-def make_velocity_datum(xs, ys, us, vs, **kwargs):
-    """ Return a Datum with velocity data
-    """
-    return Datum(position=numpy.vstack([xs, ys]),
-                 velocity=numpy.vstack([us, vs]),
-                 **kwargs)

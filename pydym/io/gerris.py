@@ -17,26 +17,26 @@ import subprocess
 from functools import reduce
 
 from ..utilities import ProgressBar
-from ..flow_data import FlowData
-from ..datum import make_velocity_datum
+from ..observations import Observations
+from ..datum import Datum
 
 
 def read_output_file(output_file):
     """ Read in an output file output by Gerris
     """
     # Read in header
-    regex = re.compile('.*:(.*)')
+    regex = re.compile(r'.*:(.*)')
     with open(output_file, 'r') as fhandle:
         header = [regex.findall(k)[0]
                   for k in fhandle.readline().split()[1:]]
 
         # Read in the rest of the file using pandas
-        datum = pandas.read_table(fhandle, sep=' ', names=header)
-        datum = make_velocity_datum(
-            xs=datum['x'], ys=datum['y'],
-            us=datum['U'], vs=datum['V'],
-            pressure=datum['P'], tracer=datum['T'])
-
+        snapshot = pandas.read_table(fhandle, sep=' ', names=header)
+        datum = Datum(
+            position=numpy.vstack([snapshot['x'], snapshot['y']]),
+            velocity=numpy.vstack([snapshot['U'], snapshot['V']]),
+            pressure=snapshot['P'],
+            tracer=snapshot['T'])
         return datum
 
 
@@ -119,8 +119,8 @@ class GerrisReader(object):
     default_templates = dict(
         gerris='/home/jess/gerris/bin/gerris2D',
         pkg_config='/home/jess/gerris/lib/pkgconfig',
-        output_file_template='output_{0}\.dat',
-        input_file_template='simulation_{0}\.gfs'
+        output_file_template=r'output_{0}\.dat',
+        input_file_template=r'simulation_{0}\.gfs'
     )
 
     def __init__(self, vertex_file, **kwargs):
@@ -134,11 +134,11 @@ class GerrisReader(object):
 
         # Generate regexes for simulation files and output files
         self.input_file_regex = re.compile(
-            self.templates['input_file_template'].format('([\.0-9]*)'))
+            self.templates['input_file_template'].format(r'([\.0-9]*)'))
         self.templates['input_file_template'] = \
             self.templates['input_file_template'].replace('\\', '')
         self.output_file_regex = re.compile(
-            self.templates['output_file_template'].format('[\.0-9]*'))
+            self.templates['output_file_template'].format(r'[\.0-9]*'))
         self.templates['output_file_template'] = \
             self.templates['output_file_template'].replace('\\', '')
         self.vertex_file = os.path.abspath(vertex_file)
@@ -175,7 +175,7 @@ class GerrisReader(object):
             print('Saving to file {0}'.format(output_name))
 
         # Set Gerris command string
-        self.command_template = (
+        command_template = (
             self.templates['gerris']
             + ' -e "OutputLocation {{ istep = 1 }} '
             + os.path.abspath(directory) + '/'
@@ -191,7 +191,7 @@ class GerrisReader(object):
             # If the data already exists, then just load it
             if os.path.exists(output_name) and not update:
                 print('Found existing file, loading')
-                data = FlowData(filename=output_name, run_checks=False)
+                data = Observations(filename=output_name, run_checks=False)
 
             else:
                 data = None
@@ -219,7 +219,7 @@ class GerrisReader(object):
                     if not os.path.exists(output_filename):
                         try:
                             subprocess.check_output(
-                                self.command_template.format(time_str),
+                                command_template.format(time_str),
                                 shell=True,
                                 stderr=subprocess.STDOUT)
                         except subprocess.CalledProcessError as err:
@@ -229,12 +229,13 @@ class GerrisReader(object):
                     # Generate data objects
                     if not data:
                         datum = read_output_file(output_filename)
-                        data = FlowData(filename=output_name,
-                                        scalar_datasets=('pressure', 'tracer'),
-                                        n_snapshots=len(gfsfiles),
-                                        n_samples=len(datum),
-                                        update=True,
-                                        properties=run_parameters)
+                        data = Observations(
+                            filename=output_name,
+                            scalar_datasets=('pressure', 'tracer'),
+                            n_snapshots=len(gfsfiles),
+                            n_samples=len(datum),
+                            update=True,
+                            properties=run_parameters)
                         data.set_snapshot(0, datum)
 
                     else:

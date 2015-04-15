@@ -27,7 +27,7 @@ class GerrisTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.expected_data = pydym.FlowData(
+        self.expected_data = pydym.Observations(
             os.path.join(TEST_DATA_DIR, 'simulations.hdf5'))
         self.reader = pydym.io.gerris.GerrisReader(
             vertex_file=os.path.join(TEST_DATA_DIR, 'vertices.csv'))
@@ -47,7 +47,7 @@ class GerrisTest(unittest.TestCase):
         dfile = os.path.join(TEST_DATA_DIR,
                              '{0}.hdf5'.format(os.path.basename(
                                                 GERRIS_DATA_DIR)))
-        expected_data = pydym.FlowData(dfile)
+        expected_data = pydym.Observations(dfile)
         output_name = 'test_data.hdf5'
 
         try:
@@ -59,7 +59,7 @@ class GerrisTest(unittest.TestCase):
             self.assertTrue(os.path.exists(output))
 
             # Load up the processed data
-            data = pydym.FlowData(output)
+            data = pydym.Observations(output)
             for key in data.keys():
                 self.assertTrue(key in expected_data.keys())
                 self.assertIsNotNone(data[key])

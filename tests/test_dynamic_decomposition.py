@@ -21,7 +21,7 @@ class TestDynamicDecomposition(unittest.TestCase):
     def setUp(self):
         current_dir = os.path.dirname(os.path.realpath(__file__))
         datafile = os.path.join(current_dir, 'resources', 'simulations.hdf5')
-        self.data = pydym.FlowData(datafile)
+        self.data = pydym.Observations(datafile)
 
     def test_init(self):
         """ Dynamic decomposition should work without errors

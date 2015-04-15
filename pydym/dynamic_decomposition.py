@@ -10,12 +10,12 @@ from __future__ import division, print_function
 
 from scipy import linalg
 from numpy.linalg import matrix_rank
-from numpy import dot, hstack, vstack, trace, diag, zeros
+from numpy import dot, hstack, trace, diag
 
 from .utilities import foldr, herm_transpose
 
 def dynamic_decomposition(data, burn=100):
-    """ Perform a dynamic decomposition on a dataset
+    r""" Perform a dynamic decomposition on a dataset
 
         We want to minimize the least-squares deviation between the matrix of
         snapshots `past` and the linear combination of the DMD modes.
@@ -34,6 +34,7 @@ def dynamic_decomposition(data, burn=100):
 
         (Jovanovic Eqn 6) which has solution x = P^{-1} q.
     """
+    # pylint: disable=C0103, R0914
     # Subdivide the time sequence into the past and current states
     past = data.snapshots[:, burn:-1]
     current = data.snapshots[:, (burn + 1):]

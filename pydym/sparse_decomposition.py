@@ -8,8 +8,8 @@
 
 from __future__ import division, print_function
 
+import numpy
 from scipy import linalg
-from numpy import dot, hstack, vstack, trace, diag, zeros
 
 from .utilities import herm_transpose, foldr
 
@@ -30,22 +30,20 @@ def sparsify_dynamic_decomposition(results, gamma=1,
             absolute_tol - absolute tolerance
             relative_tol - relative tolerance
     """
+    # pylint: disable=C0103, R0914
     # Pull out relevant bits
-    U, sigma, V = results['intermediate_values']['svd']
     P, q, s = results['intermediate_values']['weights']
-    Y = results['eigenvectors']
-    mu = results['eigenvalues']
     alpha = results['amplitudes']
 
     # Cholesky factorization of matrix P + (rho/2 * I)
     n_variables = q.shape[0]
-    L = linalg.cholesky((P + (rho / 2.) * identity(n_variables)),
+    L = linalg.cholesky((P + (rho / 2.) * numpy.identity(n_variables)),
                         lower=True)
     Lstar = herm_transpose(L)
 
     # Initial conditions
-    y = zeros(n_variables)  # Lagrange multiplier
-    z = zeros(n_variables)  # Old copy of x
+    y = numpy.zeros(n_variables)  # Lagrange multiplier
+    z = numpy.zeros(n_variables)  # Old copy of x
 
     # ADMM loop
     for step in range(max_iter):
@@ -54,7 +52,7 @@ def sparsify_dynamic_decomposition(results, gamma=1,
         x_new = linalg.solve(Lstar, linalg.solve(L, tmp))
 
         # Minimize z via thresholding
-        threshold = (gamma / rho) * ones(n_variables)
+        threshold = (gamma / rho) * numpy.ones(n_variables)
         tmp = x_new + y / rho
         z_new = ((1 - threshold / abs(tmp)) * tmp) * (abs(tmp) > threshold)
 
@@ -66,9 +64,9 @@ def sparsify_dynamic_decomposition(results, gamma=1,
         y = y + rho * (x_new - z_new)
 
         # Check stopping criteria
-        epsprim = sqrt(n_variables) * absolute_tol \
+        epsprim = numpy.sqrt(n_variables) * absolute_tol \
                   + relative_tol * max([linalg.norm(x) for x in (x_new, z_new)])
-        epsdual = sqrt(n_variables) * absolute_tol \
+        epsdual = numpy.sqrt(n_variables) * absolute_tol \
                   + relative_tol * linalg.norm(y)
         if (rprim < epsprim) and (rdual < epsdual):
             print((' ** ADMM converged **\n'
@@ -86,30 +84,36 @@ def sparsify_dynamic_decomposition(results, gamma=1,
     # Record some output data
     results = {
         'amplitudes': z,
-        'n_nonzero': count_nonzero(z),
-        'pre_polish_norm': foldr(dot, (herm_transpose(z), P, z)).real
-                           - 2 * dot(herm_transpose(q), z).real + s
+        'n_nonzero': numpy.count_nonzero(z),
+        'pre_polish_norm': (
+            foldr(numpy.dot, (herm_transpose(z), P, z)).real
+            - 2 * numpy.dot(herm_transpose(q), z).real + s)
     }
 
-    # Polish non-zero amplitudes
-    zero_idx = argwhere(abs(z) < 1e-10)[:, 0]
-    m = len(zero_idx)
-    eye = identity(n_variables)
-    E = eye[:, zero_idx]
+    ## Polish non-zero amplitudes
+    # Form Karush-Kuhn-Tucker system
+    zero_idx = numpy.argwhere(abs(z) < 1e-10)[:, 0]
+    size = len(zero_idx)
+    E = numpy.identity(n_variables)[:, zero_idx]
+    kkt_system = numpy.bmat([
+        [P, E],
+        [herm_transpose(E), numpy.zeros((size, size))]
+    ])
+    rhs = numpy.hstack((q, numpy.zeros((size,))))
 
-    # Form KKT system, solve and calculate residual
-    KKT = bmat([[P, E], [herm_transpose(E), zeros((m, m))]])
-    rhs = hstack((q, zeros((m,))))
-    soln = linalg.solve(KKT, rhs)
+    # Solve system for polished amplitudes, alpha
+    soln = linalg.solve(kkt_system, rhs)
     alpha = soln[:n_variables]
     alpha[zero_idx] = 0
-    residual = foldr(dot, (herm_transpose(alpha), P, alpha)).real \
-               - 2 * dot(herm_transpose(q), alpha).real + s
 
-    # Recod output data
+    # Calculate residual
+    residual = foldr(numpy.dot, (herm_transpose(alpha), P, alpha)).real \
+               - 2 * numpy.dot(herm_transpose(q), alpha).real + s
+
+    # Record output data
     results.update({
         'polished_amplitudes': alpha,
         'residual': residual,
-        'performance_loss': 100 * sqrt(abs(residual) / s)
+        'performance_loss': 100 * numpy.sqrt(abs(residual) / s)
     })
     return results

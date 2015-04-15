@@ -17,7 +17,7 @@ from collections import OrderedDict
 AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
 
 
-def interpolate(position, values, axis=None, decimate_by=None):
+def interpolate(position, values, decimate_by=None):
     """ Return the given attribute interpolated over a regular grid
     """
     # Generate a position grid
@@ -27,12 +27,13 @@ def interpolate(position, values, axis=None, decimate_by=None):
         values = values[::decimate_by]
     xlim = xval.min(), xval.max()
     ylim = yval.min(), yval.max()
-    nx, ny = len(xval), len(yval)
+    nxs, nys = len(xval), len(yval)
 
     # Generate and return interpolation
-    xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-    zs = mlab.griddata(xval, yval, values, xs, ys, interp='linear')
-    return xs, ys, zs
+    xgrid = numpy.linspace(*xlim, num=nxs)
+    ygrid = numpy.linspace(*ylim, num=nys)
+    zgrid = mlab.griddata(xval, yval, values, xgrid, ygrid, interp='linear')
+    return xgrid, ygrid, zgrid
 
 
 def herm_transpose(array):
@@ -60,16 +61,22 @@ class ProgressBar:
         self.width = 40
         self.__update_amount(0)
 
-    def animate(self, iter):
+    def animate(self, iteration_idx):
+        """ Animate the progress bar
+        """
         print('\r', self, end='')
         sys.stdout.flush()
-        self.update_iteration(iter + 1)
+        self.update_iteration(iteration_idx + 1)
 
     def update_iteration(self, elapsed_iter):
+        """ Update the iteration to the new value
+        """
         self.__update_amount((elapsed_iter / float(self.iterations)) * 100.0)
         self.prog_bar += r'  Running'
 
     def __update_amount(self, new_amount):
+        """ Update the amount shown on the bar to the new value
+        """
         percent_done = int(round((new_amount / 100.0) * 100.0))
         all_full = self.width - 2
         num_hashes = int(round((percent_done / 100.0) * all_full))
@@ -82,6 +89,8 @@ class ProgressBar:
             (pct_string + self.prog_bar[pct_place + len(pct_string):])
 
     def __str__(self):
+        """ String representation
+        """
         return str(self.prog_bar)
 
 
@@ -158,7 +167,7 @@ def thinned_length(length, thin_by):
         :type thin_by: int
     """
     thin_by = abs(thin_by)  # Remove negative stride if necessary
-    if not(length % thin_by):
+    if not length % thin_by:
         return length // thin_by
     else:
         return length // thin_by + 1
