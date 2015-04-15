@@ -35,7 +35,7 @@ def update_version():
     try:
         p = subprocess.Popen(["git", "describe", "--always"],
                              stdout=subprocess.PIPE)
-        stdout = p.communicate()[0].decode('utf-8')
+        stdout = p.communicate()[0]
         if p.returncode != 0:
             raise EnvironmentError
         else:
