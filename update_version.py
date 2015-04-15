@@ -6,6 +6,8 @@
     description: Tool to update the version number using `git describe`
 """
 
+from __future__ import division, print_function
+
 import subprocess
 import os
 from setuptools import Command
@@ -33,7 +35,7 @@ def update_version():
     try:
         p = subprocess.Popen(["git", "describe", "--always"],
                              stdout=subprocess.PIPE)
-        stdout = p.communicate()[0]
+        stdout = p.communicate()[0].decode('utf-8')
         if p.returncode != 0:
             raise EnvironmentError
         else:

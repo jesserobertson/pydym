@@ -6,6 +6,8 @@
     description: Unit tests for reading Gerris simulations
 """
 
+from __future__ import division, print_function
+
 import unittest
 import os
 import subprocess

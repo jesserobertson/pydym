@@ -6,6 +6,8 @@
     description: Utility functions for pydym
 """
 
+from __future__ import division, print_function
+
 import sys
 import numpy
 from matplotlib import mlab

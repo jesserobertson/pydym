@@ -6,13 +6,13 @@
     description: Dynamic decomposition of a data stream
 """
 
-from __future__ import division
-
-from .utilities import foldr, herm_transpose
+from __future__ import division, print_function
 
 from scipy import linalg
 from numpy.linalg import matrix_rank
 from numpy import dot, hstack, vstack, trace, diag, zeros
+
+from .utilities import foldr, herm_transpose
 
 def dynamic_decomposition(data, burn=100):
     """ Perform a dynamic decomposition on a dataset

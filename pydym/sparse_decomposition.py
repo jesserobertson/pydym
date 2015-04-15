@@ -6,6 +6,13 @@
     description: Sparsity-preserving dynamic decomposition of a data stream
 """
 
+from __future__ import division, print_function
+
+from scipy import linalg
+from numpy import dot, hstack, vstack, trace, diag, zeros
+
+from .utilities import herm_transpose, foldr
+
 def sparsify_dynamic_decomposition(results, gamma=1,
                                    rho=1, max_iter=10000,
                                    absolute_tol=1e-6,
@@ -92,7 +99,6 @@ def sparsify_dynamic_decomposition(results, gamma=1,
 
     # Form KKT system, solve and calculate residual
     KKT = bmat([[P, E], [herm_transpose(E), zeros((m, m))]])
-    spy(KKT)
     rhs = hstack((q, zeros((m,))))
     soln = linalg.solve(KKT, rhs)
     alpha = soln[:n_variables]

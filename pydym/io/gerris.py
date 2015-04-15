@@ -6,7 +6,7 @@
     description: Gerris I/O module for pydym
 """
 
-from __future__ import division
+from __future__ import division, print_function
 
 import re
 import numpy

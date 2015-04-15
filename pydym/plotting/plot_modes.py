@@ -6,6 +6,11 @@
     description: Plotting dynamic mode data
 """
 
+from __future__ import division
+
+from .utilities import interpolator
+
+
 def plot_modes(data, axes=None, n_quiver=3, n_contours=20):
     """ Plot the modes derived from a dynamic decomposition of the flow data.
     """

@@ -8,4 +8,4 @@
 
 from . import gerris, matlab
 
-__all__ = ['gerris', 'matlab']
+__all__ = ["gerris", "matlab"]
