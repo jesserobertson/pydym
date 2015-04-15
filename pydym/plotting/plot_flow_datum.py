@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_flow_datum(data, axes=None, decimate_by=10):
-    """ Plot a FlowDatum instance
+    """ Plot a Datum instance
     """
     xval, yval = data.position[0], data.position[1]
 

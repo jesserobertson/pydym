@@ -15,51 +15,11 @@ from itertools import product
 import matplotlib.mlab as mlab
 from collections import OrderedDict
 
+from .datum import Datum
 from .dynamic_decomposition import dynamic_decomposition
 from .utilities import thinned_length, herm_transpose
 
 AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
-
-
-class FlowDatum(dict):
-
-    """ A class to store velocity data from a flow visualisation
-    """
-
-    def __init__(self, xs, ys, us, vs, **kwargs):
-        super(FlowDatum, self).__init__()
-        self.__dict__ = self
-        self.position = numpy.vstack([xs, ys])
-        self.velocity = numpy.vstack([us, vs])
-        self.length = len(us)
-
-        for key, value in kwargs.items():
-            self[key] = value
-
-    def __len__(self):
-        return self.length
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def interpolate(self, attribute, axis=None):
-        """ Return the given attribute interpolated over a regular grid
-        """
-        # Get the values for the given attribute
-        values = getattr(self, attribute)
-        if axis is not None:
-            values = values[AXIS_LABELS[axis]]
-
-        # Generate a position grid
-        xval, yval = self.position[0], self.position[1]
-        xlim = xval.min(), xval.max()
-        ylim = yval.min(), yval.max()
-        nx, ny = len(xval), len(yval)
-
-        # Generate and return interpolation
-        xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-        zs = mlab.griddata(xval, yval, values, xs, ys, interp='linear')
-        return xs, ys, zs
 
 
 class FlowData(object):
@@ -128,17 +88,6 @@ class FlowData(object):
             os.remove(self.filename)
         self._file = h5py.File(self.filename, 'w')
 
-        # Add properties
-        grp = self._file.create_group('properties')
-        grp['shape'] = self.shape
-        grp['n_samples'] = self.n_samples
-        grp['n_dimensions'] = self.n_dimensions
-        grp['n_snapshots'] = self.n_snapshots
-        grp['snapshot_interval'] = self.snapshot_interval
-        if self.properties is not None:
-            for key, value in self.properties.items():
-                grp[key] = value
-
         # Generate positions
         grp = self._file.create_group('position')
         for axis_label in self.axis_labels:
@@ -165,14 +114,22 @@ class FlowData(object):
                                        compression="gzip")
 
         # Add properties to file
-        self.properties = self._file.create_group('properties')
-        for attr in ('shape', 'n_samples', 'n_snapshots'):
-            self.properties[attr] = getattr(self, attr)
+        grp = self._file.create_group('properties')
+        attrs_to_add = ('shape', 'n_samples', 'n_snapshots',
+                        'n_dimensions', 'snapshot_interval')
+        for attr in attrs_to_add:
+            grp[attr] = getattr(self, attr)
+
+        # Copy over existing properties, assign properties attrib to group
+        if self.properties is not None:
+            for key, value in self.properties.items():
+                grp[key] = value
+        self.properties = grp
 
     def __getitem__(self, value_or_key):
         """ Get the data associated with a given index or key
 
-            If value_or_key is an integer index, return the FlowDatum object
+            If value_or_key is an integer index, return the Datum object
             associated with that snapshot. If value_or_key is a string, return
             the h5py.Dataset object for that string.
         """
@@ -180,8 +137,8 @@ class FlowData(object):
             # We have an index
             idx = value_or_key
 
-            # Reconstruct FlowDatum
-            datum = FlowDatum(
+            # Reconstruct Datum
+            datum = Datum(
                 xs=self['position/x'][:], ys=self['position/y'][:],
                 us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
 
@@ -282,7 +239,7 @@ class FlowData(object):
     def get_snapshot(self, index):
         """ Get the snapshot associated with the given index
         """
-        # Reconstruct FlowDatum
+        # Reconstruct Datum
         datum = make_velocity_datum(
             xs=self['position/x'],
             ys=self['position/y'],
@@ -317,7 +274,7 @@ class FlowData(object):
         """ Set the snapshot data at the given index
         """
         if type(flow_datum) is not Datum:
-            raise ValueError("Trying to append non-FlowDatum object to "
+            raise ValueError("Trying to append non-Datum object to "
                              "FlowData collection")
 
         # If we have no positions yet, get them. Otherwise check that the

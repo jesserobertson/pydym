@@ -25,6 +25,9 @@ class Datum(object):
     def __len__(self):
         return len(self.position[0])
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
     def interpolate(self, attribute, axis=None, decimate_by=None):
         """ Return the given attribute interpolated over a regular grid
         """

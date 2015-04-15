@@ -47,9 +47,9 @@ def boxes_from_gfsfile(gfsfilename):
     with open(gfsfilename, 'rb') as gfsfile:
         # Return rows which start with two numbers
         boxes = []
-        for line in gfsfile:
+        for line in (l.decode('utf-8') for l in gfsfile):
             # Check we're describing a box
-            if not line.startswith('GfsBox'):
+            if not str(line).startswith('GfsBox'):
                 continue
 
             # Split line into values and keys, generate a dictionary
@@ -128,8 +128,8 @@ class GerrisReader(object):
         self.templates.update(self.default_templates)
 
         # Find Gerris on this system
-        self.templates['gerris'] = \
-            subprocess.check_output('which gerris2D', shell=True).strip('\n')
+        output = subprocess.check_output('which gerris2D', shell=True)
+        self.templates['gerris'] = output.decode('utf-8').strip('\n')
         self.templates.update(kwargs)
 
         # Generate regexes for simulation files and output files
@@ -164,7 +164,6 @@ class GerrisReader(object):
             :param show_progress: If True, prints a progress bar. Optional,
                 defaults to True
             :type show_progress: bool
-            :returns: the name of the file containing the output data
         """
         # Get output name
         if directory is None:

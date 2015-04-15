@@ -19,7 +19,8 @@ class TestDynamicDecomposition(unittest.TestCase):
     """
 
     def setUp(self):
-        datafile = os.path.join('resources', 'test_data.hdf5')
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        datafile = os.path.join(current_dir, 'resources', 'simulations.hdf5')
         self.data = pydym.FlowData(datafile)
 
     def test_init(self):
@@ -29,10 +30,10 @@ class TestDynamicDecomposition(unittest.TestCase):
         expected_keys = ('eigenvalues', 'eigenvectors', 'amplitudes',
                          'modes', 'intermediate_values')
         for key in expected_keys:
-            self.assetTrue(result[key] is not None)
+            self.assertTrue(result[key] is not None)
 
-        # Check we have all the expected outputi
-        n_modes = len(self.data)
+        # Check we have all the expected output
+        n_modes = self.data.n_snapshots - 1  # We always lose one snapshot
         self.assertEqual(len(result['eigenvalues']), n_modes)
         self.assertEqual(len(result['amplitudes']), n_modes)
         self.assertEqual(result['eigenvectors'].shape, (n_modes, n_modes))

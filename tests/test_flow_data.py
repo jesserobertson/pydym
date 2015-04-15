@@ -68,8 +68,3 @@ class FlowDataTest(unittest.TestCase):
     def tearDown(self):
         # Close references to HDF5 file
         self.data.close()
-
-        # Reset the datafile to the version in the repo (since we added
-        # snapshots etc)
-        subprocess.call('git checkout -- {0}'.format(
-            os.path.join(TEST_DATA_DIR, 'test_data.hdf5')), shell=True)
