@@ -14,20 +14,29 @@ _A library to calculate dynamic decompositions and sparse dynamic decompositions
 
 It's pretty straightforward to use - create snapshots (maybe from dumps from your simulation or experimentally using photographs/PIV/thermocouples insert your favourite tracking voodoo here), load them into a set of observations, and then pull out the modes:
 
-```
+```python
 import pydym
 
 with pydym.load('simulations.hdf5') as data:
-	results = dynamic_decomposition(data, burn=100)
-	results.modes
+	results = pydym.dynamic_decomposition(data)
+	print(results.modes)
+#prints <h5py.Dataset...
 ```
 
+Note that you'll get back as many modes as you have snapshots (less one). That might be a lot to trawl through so it's nice to approximate this in some way. You can enforce the sparsity by chaining on the sparsify function
+
+```python
+with pydym.load('simulations.hdf5') as data:
+	sparse_results = pydym.dynamic_decomposition(data).sparsify(0.1)
+	print(len(sparse_results))
+# prints: 3
+```
 
 ### I need more details! How are you making that dataset in the first place?
 
 The dataset is just a series of snapshots. A snapshot is just a list of positions, and a set of vector or scalar values observed at those positions. All the snapshots in a dataset should have the same position locations and the same properties. Note that you're not restricted to two dimensions - pydym can handle three dimensional data as well.
 
-Here's an example of creating a Datum from the dumped output from a [Gerris](http://gfs.sourceforge.net) simulation. The first few lines of the dumped output looks like this:
+Here's an example of creating a Snapshot from the dumped output from a [Gerris](http://gfs.sourceforge.net) simulation. The first few lines of the dumped output looks like this:
 
 ```bash
 cat dump_t15.dat
@@ -45,7 +54,7 @@ cat dump_t15.dat
 15 -0.265625 -0.484375 0 -0.0105522 0.0402551 5.5562e-05 7.07383e-06 1 0 1 1
 ```
 
-You can easily create a Datum by slurping this into a numpy array and then pulling out the relevant columns to make a `pydym.Datum` object. 
+You can easily create a Snapshot by slurping this into a numpy array and then pulling out the relevant columns to make a `pydym.Snapshot` object. Here's how we might wrap that into a function to read the data from a file and return a `Snapshot`.
 
 ```python
 import pydym
@@ -60,22 +69,22 @@ def read_to_datum(filename):
 	    # Read in the rest of the file using numpy
 	    data = numpy.loadtxt(fhandle)
 	    snapshot = {h: data[:, header.index(h)] for h in header}
-	    return pydym.Datum(
+	    return pydym.Snapshot(
 	        position=numpy.vstack([snapshot['x'], snapshot['y']]),
 	        velocity=numpy.vstack([snapshot['U'], snapshot['V']]),
 	        pressure=snapshot['P'],
 	        tracer=snapshot['T'])
 
-datum = read_to_datum('dump_t15.dat')
+snap = read_to_datum('dump_t15.dat')
 ``` 
 
-Note that we only need to have the position argument; all of the other keyword arguments are assumed to be observations for each of the positions. These are then available as arrays from the datum object
+Note that we only need to have the position argument; all of the other keyword arguments are assumed to be observations for each of the positions. These are then available as arrays from the `pydym.Snapshot` object:
 
 ```python
-print(datum.velocity)
-# something
-print(datum.pressure)
-# something
+print(snap.velocity)
+# prints: something
+print(snap.pressure)
+# prints: something
 ```
 
 Use Observations to store a set of snapshots. We use the excellent [h5py](http://h5py.org) library to provide on-disk storage which is transparent to you.
@@ -93,6 +102,13 @@ for i, f in enumerate(files):
 	data[i] = read_to_datum(f)
 ```
 
+You can then pull out the Snapshots as if they were sitting in a list:
+
+```python
+print(data[0])
+# prints: <pydym.Snapshot object...
+```
+
 Having generated the backing file once, you can reload the data directly from the backing file:
 
 ```python
@@ -101,7 +117,7 @@ data = pydym.Observations('simulations.hdf5')
 
 You can also load the simulation files directly using h5py if you want. Each vector is available as an HDF5 group where each dimension forms a dataset within that group (so to get the x component of velocity you'd get `data['velocity/x']`), while each scalar is available as a dataset directly (so you'd do something like `data['pressure']` for example). That's what we're doing above.
 
-You need to clean up the hdf5 file references once you're done with them however, using `data.close()` or `del data`. We provide a 'load' function so you can load the file in a nice `with` environment which does the file handling for you once you exit the `with` context:
+You need to clean up the hdf5 file references once you're done with them however, using `data.close()` or `del data`. If you don't do this then your hdf5 file might be left in a strange state and refuse to load later on. We provide a 'load' function so you can load the file in a nice `with` environment which does the file handling for you once you exit the `with` context:
 
 ```python
 with pydym.load('simualtions.hdf5') as data:
