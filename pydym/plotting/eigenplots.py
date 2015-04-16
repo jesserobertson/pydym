@@ -41,7 +41,7 @@ def eigenplot(dmd_result, amplitudes=None, cmap=None):
     fig = plt.figure(figsize=(8, 4))
     for axidx in (1, 2):
         axes = plt.subplot(1, 2, axidx)
-        if colored:
+        if amplitudes:
             axes.scatter(eigvals.real, eigvals.imag,
                          marker='o', edgecolor=colors, facecolor=colors)
         else:
