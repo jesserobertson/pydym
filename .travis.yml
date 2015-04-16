@@ -33,7 +33,7 @@ before_install:
   - conda info -a
 
 install:
-  - conda create -q -n test-pydym python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib h5py coverage coveralls
+  - conda create -q -n test-pydym python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib h5py
   - source activate test-pydym
   - python setup.py update_version install
 
@@ -42,7 +42,4 @@ before_script:
   - /etc/init.d/xvfb start
 
 script:
-  - coverage run --source pydym run_test.py
-
-after_success:
-  - coveralls
+  - python run_test.py
