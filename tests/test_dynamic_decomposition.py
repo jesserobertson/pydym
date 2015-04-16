@@ -26,17 +26,17 @@ class TestDynamicDecomposition(unittest.TestCase):
     def test_init(self):
         """ Dynamic decomposition should work without errors
         """
-        result = pydym.dynamic_decomposition(self.data, burn=0)
+        result = pydym.dynamic_decomposition(self.data)
         expected_keys = ('eigenvalues', 'eigenvectors', 'amplitudes',
-                         'modes', 'intermediate_values')
+                         'modes', 'pod_modes')
         for key in expected_keys:
-            self.assertTrue(result[key] is not None)
+            self.assertTrue(getattr(result, key) is not None)
 
         # Check we have all the expected output
         n_modes = self.data.n_snapshots - 1  # We always lose one snapshot
-        self.assertEqual(len(result['eigenvalues']), n_modes)
-        self.assertEqual(len(result['amplitudes']), n_modes)
-        self.assertEqual(result['eigenvectors'].shape, (n_modes, n_modes))
+        self.assertEqual(len(result.eigenvalues), n_modes)
+        self.assertEqual(len(result.amplitudes), n_modes)
+        self.assertEqual(result.eigenvectors.shape, (n_modes, n_modes))
 
 
 if __name__ == '__main__':
