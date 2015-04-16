@@ -14,10 +14,10 @@ before_install:
   - sudo apt-get update -qq
     # Install gerris
   - wget http://gerris.dalembert.upmc.fr/debian/popinet_key.asc
-  - apt-key add popinet_key.asc
-  - add-apt-repository "deb http://download.opensuse.org/repositories/home:/popinet/xUbuntu_12.10 ./"
-  - add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ saucy universe multiverse"
-  - add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ saucy-updates universe multiverse"
+  - sudo apt-key add popinet_key.asc
+  - sudo add-apt-repository "deb http://download.opensuse.org/repositories/home:/popinet/xUbuntu_12.10 ./"
+  - sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ saucy universe multiverse"
+  - sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ saucy-updates universe multiverse"
   - sudo apt-get update -qq
   - sudo apt-get install gerris-snapshot
   # Install miniconda
