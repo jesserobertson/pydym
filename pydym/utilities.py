@@ -147,8 +147,8 @@ def foldr(func, iterable, accum=None):
     if accum is None:
         accum, iterable = iterable[0], iterable[1:]
 
-    # Make a dummy foldr function to apply things in the right order
     def _foldr(func, iterable, accum):
+        "Dummy foldr function  to apply things in the right order"
         if len(iterable) == 0:
             return accum
         else:

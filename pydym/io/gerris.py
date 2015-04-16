@@ -17,7 +17,7 @@ from functools import reduce
 
 from ..utilities import ProgressBar
 from ..observations import Observations
-from ..datum import Datum
+from ..snapshot import Snapshot
 
 
 def read_output_file(output_file):
@@ -31,13 +31,13 @@ def read_output_file(output_file):
 
         # Read in the rest of the file using numpy
         data = numpy.loadtxt(fhandle)
-        snapshot = {h: data[:, header.index(h)] for h in header}
-        datum = Datum(
-            position=numpy.vstack([snapshot['x'], snapshot['y']]),
-            velocity=numpy.vstack([snapshot['U'], snapshot['V']]),
-            pressure=snapshot['P'],
-            tracer=snapshot['T'])
-        return datum
+        data_columns = {h: data[:, header.index(h)] for h in header}
+        snapshot = Snapshot(
+            position=numpy.vstack([data_columns['x'], data_columns['y']]),
+            velocity=numpy.vstack([data_columns['U'], data_columns['V']]),
+            pressure=data_columns['P'],
+            tracer=data_columns['T'])
+        return snapshot
 
 
 def boxes_from_gfsfile(gfsfilename):
@@ -228,15 +228,15 @@ class GerrisReader(object):
 
                     # Generate data objects
                     if not data:
-                        datum = read_output_file(output_filename)
+                        snapshot = read_output_file(output_filename)
                         data = Observations(
                             filename=output_name,
                             scalar_datasets=('pressure', 'tracer'),
                             n_snapshots=len(gfsfiles),
-                            n_samples=len(datum),
+                            n_samples=len(snapshot),
                             update=True,
                             properties=run_parameters)
-                        data.set_snapshot(0, datum)
+                        data.set_snapshot(0, snapshot)
 
                     else:
                         data.set_snapshot(

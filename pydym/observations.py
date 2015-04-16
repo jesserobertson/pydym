@@ -14,7 +14,7 @@ import os
 from itertools import product
 from collections import OrderedDict
 
-from .datum import Datum
+from .snapshot import Snapshot
 from .dynamic_decomposition import dynamic_decomposition
 from .utilities import thinned_length
 
@@ -26,7 +26,7 @@ class Observations(object):
     """ A class to store velocity data from a collection of flow visualisations
     """
 
-    def __init__(self, filename, snapshot_keys=('velocity',),
+    def __init__(self, filename, key_on=('velocity',),
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('velocity',), scalar_datasets=tuple(),
                  update=False, thin_by=None, run_checks=True,
@@ -41,7 +41,7 @@ class Observations(object):
         self.properties = properties
 
         # Set up snapshot datasets
-        self.snapshot_keys = snapshot_keys
+        self.key_on = key_on
         self.thin_by = thin_by
         self.shape = (self.n_samples, self.n_snapshots)
         self.axis_labels = list(AXIS_LABELS.keys())[:self.n_dimensions]
@@ -129,7 +129,7 @@ class Observations(object):
     def __getitem__(self, value_or_key):
         """ Get the data associated with a given index or key
 
-            If value_or_key is an integer index, return the Datum object
+            If value_or_key is an integer index, return the Snapshot object
             associated with that snapshot. If value_or_key is a string, return
             the h5py.Dataset object for that string.
         """
@@ -141,10 +141,10 @@ class Observations(object):
             except KeyError:
                 raise KeyError("Can't find item {0}".format(value_or_key))
 
-    def __setitem__(self, key, value):
-        """ Set the data associated with a key
+    def __setitem__(self, index, value):
+        """ Set the data associated with an index
         """
-        self._file[key] = value
+        self.set_snapshot(index, value)
 
     def __iter__(self):
         """ Iterate over the data snapshots
@@ -208,8 +208,8 @@ class Observations(object):
     def get_snapshot(self, index):
         """ Get the snapshot associated with the given index
         """
-        # Reconstruct Datum
-        datum = Datum(
+        # Reconstruct Snapshot
+        snapshot = Snapshot(
             position=numpy.vstack([self['position/x'],
                                    self['position/y']]))
 
@@ -224,50 +224,50 @@ class Observations(object):
             for dim_index in range(self.n_dimensions):
                 key = vector + '/' + self.axis_labels[dim_index]
                 vec_data[dim_index] = self[key][:, index]
-            setattr(datum, vector, vec_data)
+            setattr(snapshot, vector, vec_data)
 
         for scalar in self.scalars:
-            setattr(datum, scalar, numpy.asarray(self[scalar][:, index]))
+            setattr(snapshot, scalar, numpy.asarray(self[scalar][:, index]))
 
         # Add properties
-        setattr(datum, 'properties', {})
+        setattr(snapshot, 'properties', {})
         for key, value in self['properties'].items():
-            datum.properties[key] = value[()]
+            snapshot.properties[key] = value[()]
 
-        return datum
+        return snapshot
 
-    def set_snapshot(self, idx, datum):
+    def set_snapshot(self, idx, snapshot):
         """ Set the snapshot data at the given index
         """
-        if not isinstance(datum, Datum):
-            raise ValueError("Trying to append non-Datum object to "
-                             "FlowData collection")
+        if not isinstance(snapshot, Snapshot):
+            raise ValueError("Trying to append non-Snapshot object to "
+                             "Observations collection")
 
         # If we have no positions yet, get them. Otherwise check that the
         # position data matches
         if not self._positions_filled:
-            values = datum.position
+            values = snapshot.position
             for aidx, axis in enumerate(self.axis_labels):
                 self._file['position/' + axis][:] = values[aidx]
             self._positions_filled = True
         elif self.run_checks:
-            values = datum.position
+            values = snapshot.position
             for aidx, axis in enumerate(self.axis_labels):
                 if not numpy.allclose(self._file['position/' + axis],
                                       values[aidx]):
-                    raise ValueError('Flow datum supplied to FlowData '
+                    raise ValueError('Snapshot supplied to Observations '
                                      'does not have the same position data')
 
         # Append vector data in the right places
         for dset in self.vectors:
-            values = getattr(datum, dset)
+            values = getattr(snapshot, dset)
             if values is not None:
                 for aidx, axis in enumerate(self.axis_labels):
                     self._file[dset + '/' + axis][:, idx] = values[aidx]
 
         # Update scalar data
         for dset in self.scalars:
-            values = getattr(datum, dset)
+            values = getattr(snapshot, dset)
             if values is not None:
                 self._file[dset][:, idx] = values
 
@@ -281,9 +281,13 @@ class Observations(object):
 
         # Add regular dynamic mode info
         self._modes = mode_grp = self._file.require_group('modes')
-        for key, values in results.items():
-            if key == 'intermediate_values':
-                continue
+        items = {
+            'eigenvalues': results.eigenvalues,
+            'eigenvectors': results.eigenvectors,
+            'modes': results.modes,
+            'amplitudes': results.amplitudes
+        }
+        for key, values in items:
             dset = mode_grp.require_dataset(
                 name=self.snapshot_dataset_key + '_' + key,
                 shape=values.shape,
@@ -291,7 +295,7 @@ class Observations(object):
             dset[...] = values
 
         # Add POD modes (from SVD) to data
-        pod_data = zip(results['intermediate_values']['svd'],
+        pod_data = zip(results.pod_modes,
                        ('spatial', 'pod_coeffs', 'temporal'))
         for values, name in pod_data:
             dset = mode_grp.require_dataset(
@@ -300,18 +304,18 @@ class Observations(object):
                 dtype=values.dtype)
             dset[...] = values
 
-    def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
+    def set_snapshot_properties(self, key_on=None, thin_by=None):
         """ Set the properties used to generate snapshots
 
-            :param snapshot_keys: The datasets used to generate the snapshot
+            :param key_on: The datasets used to generate the snapshot
                 arrays
-            :type snapshot_keys: list of strings
+            :type key_on: list of strings
             :param thin_by: Take every 'thin_by' snapshots. `thin_by = None`
                 removes thinning.
             :type thin_by: int or None
         """
-        if snapshot_keys is not None:
-            self.snapshot_keys = snapshot_keys
+        if key_on is not None:
+            self.key_on = key_on
         if thin_by is not None:
             self.thin_by = thin_by
         self._snapshots = None
@@ -321,7 +325,7 @@ class Observations(object):
         """ Return the snapshot datset key for the current snapshot dataset
         """
         # Make snapshot dataset
-        key = '_'.join(self.snapshot_keys)
+        key = '_'.join(self.key_on)
         if self.thin_by:
             key += '_thin_by_{0}'.format(self.thin_by)
         return key
@@ -333,10 +337,10 @@ class Observations(object):
         # that vector snapshots have more samples
         vector_components = [key + '/' + ax
                              for ax, key in product(self.axis_labels,
-                                                    self.snapshot_keys)
+                                                    self.key_on)
                              if key in self.vectors]
         scalar_components = [key.replace('/', '_')
-                             for key in self.snapshot_keys
+                             for key in self.key_on
                              if key not in self.vectors]
         all_components = tuple(vector_components + scalar_components)
         n_components = len(all_components)

@@ -1,4 +1,4 @@
-""" file:   datum.py
+""" file:   snapshot.py
     author: Jess Robertson
             CSIRO Mineral Resources Flagship
     date:   Thursday 30 October 2014
@@ -6,12 +6,10 @@
     description: Class to store some spatially-located data
 """
 
-import numpy
-
 from .utilities import interpolate, AXIS_LABELS
 
 
-class Datum(object):
+class Snapshot(object):
 
     """ A class to store spatially located data
     """

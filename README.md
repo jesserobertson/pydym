@@ -1,6 +1,6 @@
 # pydym - Sparse and regular dynamic mode decompositions
 
-Jess Robertson - @jesserobertson
+Jess Robertson - @jesserobertson (twitter & github)
 
 [![Build Status](https://travis-ci.org/jesserobertson/pydym.svg?branch=develop)](https://travis-ci.org/jesserobertson/pydym) [![Code Health](https://landscape.io/github/jesserobertson/pydym/develop/landscape.svg?style=flat)](https://landscape.io/github/jesserobertson/pydym/develop)
 
@@ -20,15 +20,22 @@ import pydym
 with pydym.load('simulations.hdf5') as data:
 	results = pydym.dynamic_decomposition(data)
 	print(results.modes)
-#prints <h5py.Dataset...
+#prints: <h5py.Dataset...
 ```
 
-Note that you'll get back as many modes as you have snapshots (less one). That might be a lot to trawl through so it's nice to approximate this in some way. You can enforce the sparsity by chaining on the sparsify function
+Note that you'll get back as many modes as you have snapshots (less one). 
+
+```python
+print(len(results.modes))
+#prints: 500
+```
+
+That might be a lot to trawl through so it's nice to approximate this in some way. You can enforce the sparsity by chaining on the sparsify function
 
 ```python
 with pydym.load('simulations.hdf5') as data:
 	sparse_results = pydym.dynamic_decomposition(data).sparsify(0.1)
-	print(len(sparse_results))
+	print(len(sparse_results.modes))
 # prints: 3
 ```
 
@@ -59,7 +66,7 @@ You can easily create a Snapshot by slurping this into a numpy array and then pu
 ```python
 import pydym
 
-def read_to_datum(filename):
+def read_to_Snapshot(filename):
 	with open(filename, 'r') as fhandle:
 		# Read in header
 		regex = re.compile(r'.*:(.*)')
@@ -68,14 +75,14 @@ def read_to_datum(filename):
 
 	    # Read in the rest of the file using numpy
 	    data = numpy.loadtxt(fhandle)
-	    snapshot = {h: data[:, header.index(h)] for h in header}
-	    return pydym.Snapshot(
-	        position=numpy.vstack([snapshot['x'], snapshot['y']]),
-	        velocity=numpy.vstack([snapshot['U'], snapshot['V']]),
-	        pressure=snapshot['P'],
-	        tracer=snapshot['T'])
+	    data_columns = {h: data[:, header.index(h)] for h in header}
+        snapshot = Snapshot(
+            position=numpy.vstack([data_columns['x'], data_columns['y']]),
+            velocity=numpy.vstack([data_columns['U'], data_columns['V']]),
+            pressure=data_columns['P'],
+            tracer=data_columns['T'])
 
-snap = read_to_datum('dump_t15.dat')
+snap = read_to_Snapshot('dump_t15.dat')
 ``` 
 
 Note that we only need to have the position argument; all of the other keyword arguments are assumed to be observations for each of the positions. These are then available as arrays from the `pydym.Snapshot` object:
@@ -96,10 +103,10 @@ data = pydym.Observations(
     filename='simulations.hdf5',
     scalar_datasets=('pressure', 'tracer'),
     n_snapshots=len(files),
-    n_samples=len(datum))
+    n_samples=len(Snapshot))
 
 for i, f in enumerate(files):
-	data[i] = read_to_datum(f)
+	data[i] = read_to_Snapshot(f)
 ```
 
 You can then pull out the Snapshots as if they were sitting in a list:

@@ -21,6 +21,14 @@ TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "resources")
 GERRIS_DATA_DIR = os.path.join(os.path.dirname(__file__),
                                "resources", "simulations")
 
+# Check whether we have Gerris available
+try:
+    subprocess.check_output('which gerris2D', shell=True)
+    MISSING_GERRIS = False
+except subprocess.CalledProcessError:
+    MISSING_GERRIS = True
+
+@unittest.skipIf(MISSING_GERRIS, "System doesn't seem to have a Gerris installation")
 class GerrisTest(unittest.TestCase):
 
     """ Unit tests for flow data

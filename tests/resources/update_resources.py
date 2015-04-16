@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" file: make_hdf5.py
+""" file: update_resources.py
     author: Jess Robertson
 
     description: Make HDF5 files for running tests
@@ -10,6 +10,7 @@ from __future__ import division, print_function
 from pydym.io.gerris import GerrisReader
 import shutil
 import os
+import subprocess
 
 # Run parameters for the test data
 PARAMETERS = {
@@ -32,6 +33,13 @@ PARAMETERS = {
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__))
 
 def main():
+    # Check whether we have Gerris available
+    try:
+        subprocess.check_output('which gerris2D', shell=True)
+    except subprocess.CalledProcessError:
+        print("Can't find Gerris installation, skipping update of test resources")
+        return
+
     vertex_file = os.path.join(TEST_DATA_DIR, 'vertices.csv')
     reader = GerrisReader(vertex_file)
 
