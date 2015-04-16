@@ -31,6 +31,9 @@ before_install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
+  # Start x server
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
 
 install:
   - conda create -q -n test-pydym python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib h5py
@@ -38,8 +41,5 @@ install:
   - python setup.py update_version install
 
 # Command to run tests
-before_script:
-  - sudo /etc/init.d/xvfb start
-
 script:
   - python run_test.py
