@@ -19,23 +19,24 @@ class TestDynamicDecomposition(unittest.TestCase):
     """
 
     def setUp(self):
-        datafile = os.path.join('resources', 'test_data.hdf5')
-        self.data = pydym.FlowData(datafile)
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        datafile = os.path.join(current_dir, 'resources', 'simulations.hdf5')
+        self.data = pydym.Observations(datafile)
 
     def test_init(self):
         """ Dynamic decomposition should work without errors
         """
-        result = pydym.dynamic_decomposition(self.data, burn=0)
+        result = pydym.dynamic_decomposition(self.data)
         expected_keys = ('eigenvalues', 'eigenvectors', 'amplitudes',
-                         'modes', 'intermediate_values')
+                         'modes', 'pod_modes')
         for key in expected_keys:
-            self.assetTrue(result[key] is not None)
+            self.assertTrue(getattr(result, key) is not None)
 
-        # Check we have all the expected outputi
-        n_modes = len(self.data)
-        self.assertEqual(len(result['eigenvalues']), n_modes)
-        self.assertEqual(len(result['amplitudes']), n_modes)
-        self.assertEqual(result['eigenvectors'].shape, (n_modes, n_modes))
+        # Check we have all the expected output
+        n_modes = self.data.n_snapshots - 1  # We always lose one snapshot
+        self.assertEqual(len(result.eigenvalues), n_modes)
+        self.assertEqual(len(result.amplitudes), n_modes)
+        self.assertEqual(result.eigenvectors.shape, (n_modes, n_modes))
 
 
 if __name__ == '__main__':

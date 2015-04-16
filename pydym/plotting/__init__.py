@@ -6,7 +6,8 @@
     description: Imports for plotting module
 """
 
-from .eigenplots import eigenplot, logeigenplot
-from .plot_flow_data import plot_flow_datum
+from .eigenplots import eigenplot
+from .plot_snapshot import plot_snapshot
+from .utilities import spy, make_axes_grid
 
-__all__ = ["eigenplot", "logeigenplot", "plot_flow_datum"]
+__all__ = ["eigenplot", "spy", "plot_snapshot", "make_axes_grid"]

@@ -12,67 +12,26 @@ import numpy
 import h5py
 import os
 from itertools import product
-import matplotlib.mlab as mlab
 from collections import OrderedDict
 
+from .snapshot import Snapshot
 from .dynamic_decomposition import dynamic_decomposition
-from .utilities import thinned_length, herm_transpose
+from .utilities import thinned_length
 
 AXIS_LABELS = OrderedDict(zip(('x', 'y', 'z'), range(3)))
 
 
-class FlowDatum(dict):
-
-    """ A class to store velocity data from a flow visualisation
-    """
-
-    def __init__(self, xs, ys, us, vs, **kwargs):
-        super(FlowDatum, self).__init__()
-        self.__dict__ = self
-        self.position = numpy.vstack([xs, ys])
-        self.velocity = numpy.vstack([us, vs])
-        self.length = len(us)
-
-        for key, value in kwargs.items():
-            self[key] = value
-
-    def __len__(self):
-        return self.length
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def interpolate(self, attribute, axis=None):
-        """ Return the given attribute interpolated over a regular grid
-        """
-        # Get the values for the given attribute
-        values = getattr(self, attribute)
-        if axis is not None:
-            values = values[AXIS_LABELS[axis]]
-
-        # Generate a position grid
-        xval, yval = self.position[0], self.position[1]
-        xlim = xval.min(), xval.max()
-        ylim = yval.min(), yval.max()
-        nx, ny = len(xval), len(yval)
-
-        # Generate and return interpolation
-        xs, ys = numpy.linspace(*xlim, num=nx), numpy.linspace(*ylim, num=ny)
-        zs = mlab.griddata(xval, yval, values, xs, ys, interp='linear')
-        return xs, ys, zs
-
-
-class FlowData(object):
+class Observations(object):
 
     """ A class to store velocity data from a collection of flow visualisations
     """
 
-    def __init__(self, filename, snapshot_keys=('velocity',),
+    def __init__(self, filename, key_on=('velocity',),
                  n_snapshots=None, n_samples=None, n_dimensions=2,
                  vector_datasets=('velocity',), scalar_datasets=tuple(),
                  update=False, thin_by=None, run_checks=True,
                  snapshot_interval=1, properties=None):
-        super(FlowData, self).__init__()
+        super(Observations, self).__init__()
         self.n_samples, self.n_snapshots = n_samples, n_snapshots
         self.n_dimensions = n_dimensions
         self.snapshot_interval = snapshot_interval
@@ -82,12 +41,13 @@ class FlowData(object):
         self.properties = properties
 
         # Set up snapshot datasets
-        self.snapshot_keys = snapshot_keys
+        self.key_on = key_on
         self.thin_by = thin_by
         self.shape = (self.n_samples, self.n_snapshots)
         self.axis_labels = list(AXIS_LABELS.keys())[:self.n_dimensions]
         self._snapshots = None
         self._modes = None
+        self._recalc_snapshots, self._positions_filled = None, None
 
         # Initialize HDF5 backend file
         self._file = None
@@ -106,13 +66,13 @@ class FlowData(object):
         self.properties = self['properties']
         for attr in ('shape', 'n_samples', 'n_snapshots', 'snapshot_interval'):
             setattr(self, attr, self.properties[attr][()])
-        self.n_dimensions = len(self['position'].keys())
-        self.axis_labels = self['position'].keys()
+        self.n_dimensions = len(self['position'])
+        self.axis_labels = tuple(self['position'].keys())
         self.vectors = [n for n, v in self._file.items()
-                        if type(v) is h5py.Group
+                        if isinstance(v, h5py.Group)
                         and n not in ('snapshots', 'properties')]
         self.scalars = [n for n, v in self._file.items()
-                        if type(v) is h5py.Dataset]
+                        if isinstance(v, h5py.Dataset)]
 
     def _init_from_arguments(self):
         """ Initialize the FlowData object from the arguments given to __init__
@@ -127,17 +87,6 @@ class FlowData(object):
         if os.path.exists(self.filename):
             os.remove(self.filename)
         self._file = h5py.File(self.filename, 'w')
-
-        # Add properties
-        grp = self._file.create_group('properties')
-        grp['shape'] = self.shape
-        grp['n_samples'] = self.n_samples
-        grp['n_dimensions'] = self.n_dimensions
-        grp['n_snapshots'] = self.n_snapshots
-        grp['snapshot_interval'] = self.snapshot_interval
-        if self.properties is not None:
-            for key, value in self.properties.items():
-                grp[key] = value
 
         # Generate positions
         grp = self._file.create_group('position')
@@ -165,65 +114,42 @@ class FlowData(object):
                                        compression="gzip")
 
         # Add properties to file
-        self.properties = self._file.create_group('properties')
-        for attr in ('shape', 'n_samples', 'n_snapshots'):
-            self.properties[attr] = getattr(self, attr)
+        grp = self._file.create_group('properties')
+        attrs_to_add = ('shape', 'n_samples', 'n_snapshots',
+                        'n_dimensions', 'snapshot_interval')
+        for attr in attrs_to_add:
+            grp[attr] = getattr(self, attr)
+
+        # Copy over existing properties, assign properties attrib to group
+        if self.properties is not None:
+            for key, value in self.properties.items():
+                grp[key] = value
+        self.properties = grp
 
     def __getitem__(self, value_or_key):
         """ Get the data associated with a given index or key
 
-            If value_or_key is an integer index, return the FlowDatum object
+            If value_or_key is an integer index, return the Snapshot object
             associated with that snapshot. If value_or_key is a string, return
             the h5py.Dataset object for that string.
         """
-        if type(value_or_key) is int:
-            # We have an index
-            idx = value_or_key
-
-            # Reconstruct FlowDatum
-            datum = FlowDatum(
-                xs=self['position/x'][:], ys=self['position/y'][:],
-                us=self['velocity/x'][:, idx], vs=self['velocity/y'][:, idx])
-
-            # Add other scalar and vector fields
-            remaining_vectors = set(self.vectors) \
-                - set(('velocity', 'position', 'modes', 'properties'))
-            for vector in remaining_vectors:
-                vec_data = numpy.empty(
-                    shape=(self.n_dimensions,
-                           self.n_samples,
-                           self.n_snapshots))
-                for dim_idx in range(self.n_dimensions):
-                    key = vector + '/' + self.axis_labels[dim_idx]
-                    vec_data[dim_idx] = self[key][:, idx]
-                setattr(datum, vector, vec_data)
-
-            for scalar in self.scalars:
-                setattr(datum, scalar, numpy.asarray(self[scalar][:, idx]))
-            return datum
-
+        if isinstance(value_or_key, int):
+            return self.get_snapshot(value_or_key)
         else:
-            # We have a key
             try:
                 return self._file[value_or_key]
             except KeyError:
                 raise KeyError("Can't find item {0}".format(value_or_key))
 
-    def __getitem__(self, key):
-        """ Get the data associated with a key, returns
-            the h5py.Dataset object for that string.
+    def __setitem__(self, index, value):
+        """ Set the data associated with an index
         """
-        return self._file[key]
-
-    def __setitem__(self, key, value):
-        """ Set the data associated with a key
-        """
-        self._file[key] = value
+        self.set_snapshot(index, value)
 
     def __iter__(self):
         """ Iterate over the data snapshots
         """
-        for idx in xrange(self.n_snapshots):
+        for idx in range(self.n_snapshots):
             yield self.get_snapshot(idx)
 
     def __enter__(self):
@@ -231,7 +157,7 @@ class FlowData(object):
         """
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, *args):
         """ Clean up HDF5 references on with block exit
         """
         self.close()
@@ -282,16 +208,14 @@ class FlowData(object):
     def get_snapshot(self, index):
         """ Get the snapshot associated with the given index
         """
-        # Reconstruct FlowDatum
-        datum = make_velocity_datum(
-            xs=self['position/x'],
-            ys=self['position/y'],
-            us=self['velocity/x'][:, index],
-            vs=self['velocity/y'][:, index])
+        # Reconstruct Snapshot
+        snapshot = Snapshot(
+            position=numpy.vstack([self['position/x'],
+                                   self['position/y']]))
 
         # Add other scalar and vector fields
-        remaining_vectors = set(self.vectors) \
-            - set(('velocity', 'position'))
+        remaining_vectors = [v for v in self.vectors
+                             if v != 'position']
         for vector in remaining_vectors:
             vec_data = numpy.empty(
                 shape=(self.n_dimensions,
@@ -300,51 +224,50 @@ class FlowData(object):
             for dim_index in range(self.n_dimensions):
                 key = vector + '/' + self.axis_labels[dim_index]
                 vec_data[dim_index] = self[key][:, index]
-            setattr(datum, vector, vec_data)
+            setattr(snapshot, vector, vec_data)
 
         for scalar in self.scalars:
-            setattr(datum, scalar, numpy.asarray(self[scalar][:, index]))
+            setattr(snapshot, scalar, numpy.asarray(self[scalar][:, index]))
 
         # Add properties
-        setattr(datum, 'properties', {})
-        properties_grp = self['properties']
-        for key in properties_grp.keys():
-            datum.properties[key] = properties_grp[key][()]
+        setattr(snapshot, 'properties', {})
+        for key, value in self['properties'].items():
+            snapshot.properties[key] = value[()]
 
-        return datum
+        return snapshot
 
-    def set_snapshot(self, idx, flow_datum):
+    def set_snapshot(self, idx, snapshot):
         """ Set the snapshot data at the given index
         """
-        if type(flow_datum) is not Datum:
-            raise ValueError("Trying to append non-FlowDatum object to "
-                             "FlowData collection")
+        if not isinstance(snapshot, Snapshot):
+            raise ValueError("Trying to append non-Snapshot object to "
+                             "Observations collection")
 
         # If we have no positions yet, get them. Otherwise check that the
         # position data matches
         if not self._positions_filled:
-            values = flow_datum.position
+            values = snapshot.position
             for aidx, axis in enumerate(self.axis_labels):
                 self._file['position/' + axis][:] = values[aidx]
             self._positions_filled = True
         elif self.run_checks:
-            values = flow_datum.position
+            values = snapshot.position
             for aidx, axis in enumerate(self.axis_labels):
                 if not numpy.allclose(self._file['position/' + axis],
                                       values[aidx]):
-                    raise ValueError('Flow datum supplied to FlowData '
+                    raise ValueError('Snapshot supplied to Observations '
                                      'does not have the same position data')
 
         # Append vector data in the right places
         for dset in self.vectors:
-            values = getattr(flow_datum, dset)
+            values = getattr(snapshot, dset)
             if values is not None:
                 for aidx, axis in enumerate(self.axis_labels):
                     self._file[dset + '/' + axis][:, idx] = values[aidx]
 
         # Update scalar data
         for dset in self.scalars:
-            values = getattr(flow_datum, dset)
+            values = getattr(snapshot, dset)
             if values is not None:
                 self._file[dset][:, idx] = values
 
@@ -358,9 +281,13 @@ class FlowData(object):
 
         # Add regular dynamic mode info
         self._modes = mode_grp = self._file.require_group('modes')
-        for key, values in results.items():
-            if key == 'intermediate_values':
-                continue
+        items = {
+            'eigenvalues': results.eigenvalues,
+            'eigenvectors': results.eigenvectors,
+            'modes': results.modes,
+            'amplitudes': results.amplitudes
+        }
+        for key, values in items:
             dset = mode_grp.require_dataset(
                 name=self.snapshot_dataset_key + '_' + key,
                 shape=values.shape,
@@ -368,7 +295,7 @@ class FlowData(object):
             dset[...] = values
 
         # Add POD modes (from SVD) to data
-        pod_data = zip(results['intermediate_values']['svd'],
+        pod_data = zip(results.pod_modes,
                        ('spatial', 'pod_coeffs', 'temporal'))
         for values, name in pod_data:
             dset = mode_grp.require_dataset(
@@ -376,20 +303,19 @@ class FlowData(object):
                 shape=values.shape,
                 dtype=values.dtype)
             dset[...] = values
-        
 
-    def set_snapshot_properties(self, snapshot_keys=None, thin_by=None):
+    def set_snapshot_properties(self, key_on=None, thin_by=None):
         """ Set the properties used to generate snapshots
 
-            :param snapshot_keys: The datasets used to generate the snapshot
+            :param key_on: The datasets used to generate the snapshot
                 arrays
-            :type snapshot_keys: list of strings
+            :type key_on: list of strings
             :param thin_by: Take every 'thin_by' snapshots. `thin_by = None`
                 removes thinning.
             :type thin_by: int or None
         """
-        if snapshot_keys is not None:
-            self.snapshot_keys = snapshot_keys
+        if key_on is not None:
+            self.key_on = key_on
         if thin_by is not None:
             self.thin_by = thin_by
         self._snapshots = None
@@ -399,7 +325,7 @@ class FlowData(object):
         """ Return the snapshot datset key for the current snapshot dataset
         """
         # Make snapshot dataset
-        key = '_'.join(self.snapshot_keys)
+        key = '_'.join(self.key_on)
         if self.thin_by:
             key += '_thin_by_{0}'.format(self.thin_by)
         return key
@@ -411,10 +337,10 @@ class FlowData(object):
         # that vector snapshots have more samples
         vector_components = [key + '/' + ax
                              for ax, key in product(self.axis_labels,
-                                                    self.snapshot_keys)
+                                                    self.key_on)
                              if key in self.vectors]
         scalar_components = [key.replace('/', '_')
-                             for key in self.snapshot_keys
+                             for key in self.key_on
                              if key not in self.vectors]
         all_components = tuple(vector_components + scalar_components)
         n_components = len(all_components)
@@ -455,4 +381,4 @@ def load(datafile):
 
         and have pydym clean up the HDF5 references for you nicely.
     """
-    return FlowData(datafile)
+    return Observations(datafile)

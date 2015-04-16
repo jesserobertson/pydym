@@ -21,13 +21,21 @@ TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "resources")
 GERRIS_DATA_DIR = os.path.join(os.path.dirname(__file__),
                                "resources", "simulations")
 
+# Check whether we have Gerris available
+try:
+    subprocess.check_output('which gerris2D', shell=True)
+    MISSING_GERRIS = False
+except subprocess.CalledProcessError:
+    MISSING_GERRIS = True
+
+@unittest.skipIf(MISSING_GERRIS, "System doesn't seem to have a Gerris installation")
 class GerrisTest(unittest.TestCase):
 
     """ Unit tests for flow data
     """
 
     def setUp(self):
-        self.expected_data = pydym.FlowData(
+        self.expected_data = pydym.Observations(
             os.path.join(TEST_DATA_DIR, 'simulations.hdf5'))
         self.reader = pydym.io.gerris.GerrisReader(
             vertex_file=os.path.join(TEST_DATA_DIR, 'vertices.csv'))
@@ -35,9 +43,9 @@ class GerrisTest(unittest.TestCase):
     def test_reader(self):
         """ Reader should initialize OK
         """
-        self.assertEqual(
-            self.reader.templates['gerris'],
-            subprocess.check_output('which gerris2D', shell=True).strip('\n'))
+        gerris = subprocess.check_output('which gerris2D', shell=True)
+        gerris = gerris.decode('utf-8').strip('\n')
+        self.assertEqual(self.reader.templates['gerris'], gerris)
         self.assertIsNotNone(self.reader.templates)
 
     def test_process_directory(self):
@@ -47,24 +55,29 @@ class GerrisTest(unittest.TestCase):
         dfile = os.path.join(TEST_DATA_DIR,
                              '{0}.hdf5'.format(os.path.basename(
                                                 GERRIS_DATA_DIR)))
-        expected_data = pydym.FlowData(dfile)
+        expected_data = pydym.Observations(dfile)
+        output_name = 'test_data.hdf5'
 
         try:
-            data = self.reader.process_directory(GERRIS_DATA_DIR,
-                                                 output_name='test_data',
-                                                 update=True)
+            # Process the directory
+            self.reader.process_directory(GERRIS_DATA_DIR,
+                                          output_name=output_name,
+                                          update=True, clean=False)
+            output = os.path.join(GERRIS_DATA_DIR, output_name)
+            self.assertTrue(os.path.exists(output))
+
+            # Load up the processed data
+            data = pydym.Observations(output)
             for key in data.keys():
-                self.assertTrue(key in self.expected_data.keys())
+                self.assertTrue(key in expected_data.keys())
                 self.assertIsNotNone(data[key])
-            self.assertTrue(os.path.exists(
-                            os.path.join(GERRIS_DATA_DIR, data.filename)))
             data.close()
 
         finally:
-            filename = os.path.join(GERRIS_DATA_DIR, 'test_data.hdf5')
-            if os.path.exists(filename):
-                os.remove(filename)
-            self.assertFalse(os.path.exists(filename))
+            output_name = os.path.join(GERRIS_DATA_DIR, 'test_data.hdf5')
+            if os.path.exists(output_name):
+                os.remove(output_name)
+            self.assertFalse(os.path.exists(output_name))
 
     def test_make_vertex_file(self):
         """ Test that we can make a vertex file OK

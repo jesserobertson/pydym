@@ -13,24 +13,24 @@ import os
 import subprocess
 import numpy
 
-from pydym import FlowData
+from pydym import Observations
 
 
 # location of test data files
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "resources")
+TEST_DATAFILE = os.path.join(TEST_DATA_DIR, 'simulations.hdf5')
 
 
-class FlowDataTest(unittest.TestCase):
+class TestObservations(unittest.TestCase):
 
     """ Unit tests for flow data
     """
 
     def setUp(self):
-        self.test_datafile = os.path.join(TEST_DATA_DIR, 'simulations.hdf5')
-        self.data = FlowData(self.test_datafile)
+        self.data = Observations(TEST_DATAFILE)
 
     def test_read_from_hdf5(self):
-        """ FlowData should initialize ok from hdf5
+        """ Observations should initialize ok from hdf5
         """
         expected_keys = set(('velocity', 'position', 'pressure', 'tracer',
                              'snapshots', 'properties'))
@@ -51,10 +51,10 @@ class FlowDataTest(unittest.TestCase):
         """
         old_snapshot = self.data.snapshots
         self.data.set_snapshot_properties(
-            snapshot_keys=['pressure', 'velocity'])
+            key_on=['pressure', 'velocity'])
         self.assertIsNotNone(self.data.snapshots)
         self.assertIsNotNone(self.data['snapshots/pressure_velocity'])
-        self.data.set_snapshot_properties(snapshot_keys=['velocity'])
+        self.data.set_snapshot_properties(key_on=['velocity'])
         self.assertIsNotNone(self.data.snapshots)
         self.assertIsNotNone(self.data['snapshots/velocity'])
         self.assertIsNotNone(numpy.allclose(self.data.snapshots, old_snapshot))
@@ -69,7 +69,5 @@ class FlowDataTest(unittest.TestCase):
         # Close references to HDF5 file
         self.data.close()
 
-        # Reset the datafile to the version in the repo (since we added
-        # snapshots etc)
-        subprocess.call('git checkout -- {0}'.format(
-            os.path.join(TEST_DATA_DIR, 'test_data.hdf5')), shell=True)
+        # Reload HDF5 file from git
+        subprocess.call('git checkout -- {0}'.format(TEST_DATAFILE), shell=True)

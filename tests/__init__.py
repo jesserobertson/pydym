@@ -6,6 +6,6 @@
     description: Imports for test suites
 """
 
-from . import test_flow_data, test_gerris, test_utilities
+from . import test_observations, test_gerris, test_utilities
 
-__all__ = ["test_flow_data", "test_gerris", "test_utilities"]
+__all__ = ["test_observations", "test_gerris", "test_utilities"]
