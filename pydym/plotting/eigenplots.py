@@ -25,8 +25,8 @@ def eigenplot(dmd_result, amplitudes=None, cmap=None):
                 instances containing the plot.
     """
     # Pull out relevant info
-    eigvals = dmd_result['eigenvalues']
-    alpha = dmd_result['amplitudes']
+    eigvals = dmd_result.eigenvalues
+    alpha = dmd_result.amplitudes
 
     # Set up background colors etc
     angles = numpy.linspace(0, 2 * numpy.pi, 299)
