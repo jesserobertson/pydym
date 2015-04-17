@@ -24,7 +24,7 @@ setup(
     # Metadata
     name='pydym',
     version=get_version(),
-    description='Dynamic mode decompositions of data in Python',
+    description='Sparse and regular dynamic mode decomposition (DMD) of observations of physical systems',
     author='Jess Robertson',
     author_email='jesse.robertson@csiro.au',
     classifiers=[
@@ -41,7 +41,6 @@ setup(
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Scientific/Engineering :: Physics',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: Scientific/Engineering :: Geology',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
