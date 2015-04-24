@@ -36,11 +36,12 @@ class dynamic_decomposition(object):
         (Jovanovic Eqn 6) which has solution x = P^{-1} q.
     """
 
-    def __init__(self, data, burn=None):
+    def __init__(self, data, thin=None, burn=None):
         # Sort out inputs
         super(dynamic_decomposition, self).__init__()
         self.data = data
         self.burn = burn or 0
+        self.thin = thin or 1
 
         # Set up initial dynamic mode decomposition
         self.pod_modes = None
@@ -62,8 +63,8 @@ class dynamic_decomposition(object):
         """
         # pylint: disable=C0103, R0914
         # Subdivide the time sequence into the past and current states
-        past = self.data.snapshots[:, self.burn:-1]
-        current = self.data.snapshots[:, (self.burn + 1):]
+        past = self.data.snapshots[:, self.burn:-1:self.thin]
+        current = self.data.snapshots[:, (self.burn + 1)::self.thin]
 
         # Calculate SVD 'pod modes' of past data array
         U, sigma, Vstar = linalg.svd(past, full_matrices=False)
