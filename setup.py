@@ -49,7 +49,12 @@ setup(
     ],
 
     # Requirements
-    install_requires=REQUIREMENTS,
+    install_requires=[
+        'h5py>=2.0.0',
+        'matplotlib>=1.0.0',
+        'numpy>=1.8.0',
+        'scipy>=0.10.0'
+    ],
 
     # Contents
     packages=find_packages(exclude=['tests', 'docs']),
