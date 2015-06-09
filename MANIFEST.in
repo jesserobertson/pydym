@@ -1,0 +1,3 @@
+include README.md
+include requirements.txt
+include update_version.py
